@@ -6,6 +6,32 @@ use CodeIgniter\Config\BaseConfig;
 
 class App extends BaseConfig
 {
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Prefer a request-derived public URL so CSS/JS resolve under XAMPP subfolders.
+        if (isset($_SERVER['HTTP_HOST'], $_SERVER['SCRIPT_NAME'])) {
+            $this->baseURL = $this->detectBaseURL();
+        }
+    }
+
+    /**
+     * Build baseURL from the current front-controller path (…/public/).
+     */
+    private function detectBaseURL(): string
+    {
+        $isSecure = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || ((string) ($_SERVER['SERVER_PORT'] ?? '') === '443')
+            || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
+        $scheme = $isSecure ? 'https' : 'http';
+        $script = str_replace('\\', '/', (string) $_SERVER['SCRIPT_NAME']);
+        $path   = rtrim(str_replace(basename($script), '', $script), '/');
+
+        return $scheme . '://' . $_SERVER['HTTP_HOST'] . ($path === '' ? '/' : $path . '/');
+    }
+
     /**
      * --------------------------------------------------------------------------
      * Base Site URL
@@ -16,7 +42,7 @@ class App extends BaseConfig
      *
      * E.g., http://example.com/
      */
-    public string $baseURL = 'http://localhost:8080/';
+    public string $baseURL = 'http://localhost/justiceheritage/public/';
 
     /**
      * Allowed Hostnames in the Site URL other than the hostname in the baseURL.
@@ -40,7 +66,7 @@ class App extends BaseConfig
      * something else. If you have configured your web server to remove this file
      * from your site URIs, set this variable to an empty string.
      */
-    public string $indexPage = 'index.php';
+    public string $indexPage = '';
 
     /**
      * --------------------------------------------------------------------------
@@ -120,7 +146,7 @@ class App extends BaseConfig
      *
      * @var list<string>
      */
-    public array $supportedLocales = ['en'];
+    public array $supportedLocales = ['en', 'fr'];
 
     /**
      * --------------------------------------------------------------------------
