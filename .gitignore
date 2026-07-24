@@ -1,0 +1,5 @@
+/.env
+/.gitignore~
+/.gitlab-ci.yml
+/composer.lock
+/vendor
