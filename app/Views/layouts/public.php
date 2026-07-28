@@ -18,7 +18,6 @@
     <div class="jh-trustbar" role="note">
         <div class="jh-container">
             <span><strong><?= esc(lang('Site.trust_official')) ?></strong> — <?= esc(lang('Site.trust_ministry')) ?></span>
-            <span><?= esc(lang('Site.trust_secure')) ?></span>
         </div>
     </div>
 
