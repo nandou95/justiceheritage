@@ -7,18 +7,18 @@ use CodeIgniter\Config\BaseConfig;
 class Email extends BaseConfig
 {
     public string $fromEmail  = '';
-    public string $fromName   = '';
+    public string $fromName   = 'JusticeHeritage';
     public string $recipients = '';
 
     /**
      * The "user agent"
      */
-    public string $userAgent = 'CodeIgniter';
+    public string $userAgent = 'JusticeHeritage';
 
     /**
      * The mail sending protocol: mail, sendmail, smtp
      */
-    public string $protocol = 'mail';
+    public string $protocol = 'smtp';
 
     /**
      * The server path to Sendmail.
@@ -48,12 +48,12 @@ class Email extends BaseConfig
     /**
      * SMTP Port
      */
-    public int $SMTPPort = 25;
+    public int $SMTPPort = 465;
 
     /**
      * SMTP Timeout (in seconds)
      */
-    public int $SMTPTimeout = 5;
+    public int $SMTPTimeout = 60;
 
     /**
      * Enable persistent SMTP connections
@@ -67,7 +67,7 @@ class Email extends BaseConfig
      *             to the server. 'ssl' means implicit SSL. Connection on port
      *             465 should set this to ''.
      */
-    public string $SMTPCrypto = 'tls';
+    public string $SMTPCrypto = 'ssl';
 
     /**
      * Enable word-wrap
@@ -82,7 +82,7 @@ class Email extends BaseConfig
     /**
      * Type of mail, either 'text' or 'html'
      */
-    public string $mailType = 'text';
+    public string $mailType = 'html';
 
     /**
      * Character set (utf-8, iso-8859-1, etc.)
@@ -92,7 +92,7 @@ class Email extends BaseConfig
     /**
      * Whether to validate the email address
      */
-    public bool $validate = false;
+    public bool $validate = true;
 
     /**
      * Email Priority. 1 = highest. 5 = lowest. 3 = normal
@@ -123,4 +123,27 @@ class Email extends BaseConfig
      * Enable notify message from server
      */
     public bool $DSN = false;
+
+    /**
+     * When false, notification methods log and return false without throwing.
+     */
+    public bool $emailVerificationEnabled = true;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Gmail App Passwords are 16 characters (often shown with spaces).
+        // A longer/shorter "normal" password will be rejected with SMTP 535.
+        if (
+            str_contains(strtolower($this->SMTPHost), 'gmail.com')
+            && $this->SMTPPass !== ''
+            && strlen(str_replace(' ', '', $this->SMTPPass)) !== 16
+        ) {
+            log_message(
+                'warning',
+                'Gmail SMTP is configured with a password that does not look like a 16-character App Password. SMTP AUTH will likely fail with 535-5.7.8.'
+            );
+        }
+    }
 }

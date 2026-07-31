@@ -17,7 +17,23 @@
         <div class="jh-auth-panel-inner">
             <p class="jh-auth-welcome"><?= esc(lang('Site.register_welcome')) ?></p>
             <h1><?= esc(lang('Site.success_h1')) ?></h1>
-            <p class="jh-auth-lead"><?= lang('Site.success_thanks', ['<strong>' . esc($name ?? lang('Site.complainant')) . '</strong>']) ?></p>
+            <p class="jh-auth-lead"><strong><?= esc($message ?? lang('Site.success_completed')) ?></strong></p>
+            <p><?= lang('Site.success_thanks', ['<strong>' . esc($name ?? lang('Site.complainant')) . '</strong>']) ?></p>
+
+            <?php if (array_key_exists('mailOk', get_defined_vars())): ?>
+                <?php if (! empty($mailOk)): ?>
+                    <div class="jh-auth-info" role="status">
+                        <?= esc(lang('Site.success_mail_ok')) ?>
+                    </div>
+                <?php else: ?>
+                    <div class="jh-auth-alert" role="alert">
+                        <p class="mb-1"><?= esc(lang('Site.success_mail_fail')) ?></p>
+                        <?php if (! empty($mailError)): ?>
+                            <p class="mb-0"><small><?= esc($mailError) ?></small></p>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
 
             <ol class="jh-auth-steps jh-auth-steps--three">
                 <li class="is-active"><?= esc(lang('Site.success_step1')) ?></li>
@@ -27,7 +43,6 @@
 
             <div class="jh-auth-actions" style="display:flex;flex-wrap:wrap;gap:.75rem;">
                 <a class="btn btn-jh-primary" href="<?= site_url('login') ?>"><?= esc(lang('Site.success_signin')) ?></a>
-                <a class="btn btn-jh-secondary" href="<?= site_url('portal/demo') ?>"><?= esc(lang('Portal.app_name')) ?></a>
                 <a class="btn btn-jh-secondary" href="<?= site_url('/') ?>"><?= esc(lang('Site.success_home')) ?></a>
             </div>
         </div>

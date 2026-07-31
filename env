@@ -50,6 +50,22 @@
 # database.tests.port = 3306
 
 #--------------------------------------------------------------------
+# EMAIL
+#--------------------------------------------------------------------
+
+# email.protocol = smtp
+# email.SMTPHost = smtp.gmail.com
+# email.SMTPUser = your-email@example.com
+# email.SMTPPass = your-app-password
+# email.fromEmail = your-email@example.com
+# email.fromName = JusticeHeritage
+# email.SMTPPort = 587
+# email.SMTPCrypto = tls
+# email.mailType = html
+# email.SMTPTimeout = 30
+# email.emailVerificationEnabled = true
+
+#--------------------------------------------------------------------
 # ENCRYPTION
 #--------------------------------------------------------------------
 

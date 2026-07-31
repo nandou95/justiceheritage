@@ -564,6 +564,413 @@ a:hover {
   max-width: 54ch;
 }
 
+/* Court pathways on home */
+.jh-pathways {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.jh-pathway {
+  display: grid;
+  grid-template-columns: minmax(14rem, 0.85fr) minmax(0, 1.4fr);
+  gap: 1.5rem 2rem;
+  padding: 1.6rem 0 1.75rem;
+  border-top: 1px solid rgba(10, 50, 39, 0.12);
+}
+
+.jh-pathway:first-child {
+  border-top: 0;
+  padding-top: 0.35rem;
+}
+
+.jh-pathway-head {
+  max-width: 28rem;
+}
+
+.jh-pathway-level {
+  display: inline-block;
+  margin-bottom: 0.55rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #8f7329;
+}
+
+.jh-pathway-head h3 {
+  margin: 0 0 0.55rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.2vw, 1.7rem);
+  font-weight: 650;
+  line-height: 1.2;
+  color: var(--jh-forest);
+  letter-spacing: -0.015em;
+}
+
+.jh-pathway-head p {
+  margin: 0;
+  color: var(--jh-muted);
+  line-height: 1.55;
+  font-size: 0.96rem;
+}
+
+.jh-pathway-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+  counter-reset: pathway;
+}
+
+.jh-pathway-steps li {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.85rem;
+  align-items: start;
+  position: relative;
+}
+
+.jh-pathway-steps li::before {
+  counter-increment: pathway;
+  content: counter(pathway, decimal-leading-zero);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--jh-forest);
+  background: rgba(23, 107, 79, 0.08);
+  border: 1px solid rgba(23, 107, 79, 0.18);
+}
+
+.jh-pathway-steps strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: #122018;
+  font-size: 0.98rem;
+  font-weight: 650;
+}
+
+.jh-pathway-steps span {
+  display: block;
+  color: var(--jh-muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+/* Modern court process workflows */
+.jh-section--flows {
+  background:
+    radial-gradient(ellipse 70% 50% at 0% 0%, rgba(37, 99, 235, 0.05), transparent 55%),
+    radial-gradient(ellipse 60% 45% at 100% 40%, rgba(23, 107, 79, 0.05), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(196, 162, 74, 0.08), transparent 55%),
+    #f7f8f6;
+}
+
+.jh-flow-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 0 0 1.75rem;
+}
+
+.jh-flow-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  background: #fff;
+  border: 1px solid #e5e9ed;
+}
+
+.jh-flow-legend span::before {
+  content: "";
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+}
+
+.jh-flow-legend .is-communal::before {
+  background: #2563eb;
+}
+
+.jh-flow-legend .is-provincial::before {
+  background: #176b4f;
+}
+
+.jh-flow-legend .is-regional::before {
+  background: #c4a24a;
+}
+
+.jh-flows {
+  display: grid;
+  gap: 1.75rem;
+}
+
+.jh-flow {
+  --flow: #2563eb;
+  --flow-soft: rgba(37, 99, 235, 0.1);
+  --flow-border: rgba(37, 99, 235, 0.22);
+  --flow-deep: #1e40af;
+  border: 1px solid var(--flow-border);
+  border-radius: 1.25rem;
+  background: #fff;
+  padding: 1.35rem 1.35rem 1.5rem;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.jh-flow::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.35rem;
+  background: linear-gradient(180deg, var(--flow), var(--flow-deep));
+}
+
+.jh-flow--communal {
+  --flow: #2563eb;
+  --flow-soft: rgba(37, 99, 235, 0.1);
+  --flow-border: rgba(37, 99, 235, 0.2);
+  --flow-deep: #1e40af;
+}
+
+.jh-flow--provincial {
+  --flow: #176b4f;
+  --flow-soft: rgba(23, 107, 79, 0.1);
+  --flow-border: rgba(23, 107, 79, 0.2);
+  --flow-deep: #0a3227;
+}
+
+.jh-flow--regional {
+  --flow: #c4a24a;
+  --flow-soft: rgba(196, 162, 74, 0.14);
+  --flow-border: rgba(196, 162, 74, 0.28);
+  --flow-deep: #8f7329;
+}
+
+.jh-flow-head {
+  margin: 0 0 1.25rem;
+  padding-left: 0.55rem;
+  max-width: 46rem;
+}
+
+.jh-flow-badge {
+  display: inline-flex;
+  margin-bottom: 0.55rem;
+  padding: 0.32rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--flow-deep);
+  background: var(--flow-soft);
+}
+
+.jh-flow-head h3 {
+  margin: 0 0 0.45rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.3vw, 1.75rem);
+  font-weight: 650;
+  color: #122018;
+  line-height: 1.2;
+}
+
+.jh-flow-head p {
+  margin: 0;
+  color: var(--jh-muted);
+  font-size: 0.96rem;
+  line-height: 1.55;
+}
+
+.jh-flow-track {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  overflow-x: auto;
+  padding: 0.35rem 0.15rem 0.75rem;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.jh-flow-card {
+  --step-i: 0;
+  flex: 0 0 min(16.5rem, 78vw);
+  scroll-snap-align: start;
+  border: 1px solid #e8eef0;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, #fff 0%, #fbfcfd 100%);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  transition:
+    transform 0.28s var(--ease),
+    box-shadow 0.28s var(--ease),
+    border-color 0.28s var(--ease);
+  opacity: 0;
+  transform: translateY(1rem);
+}
+
+.jh-flow.is-visible .jh-flow-card {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(var(--step-i) * 0.07s);
+}
+
+.jh-flow.is-visible .jh-flow-card:hover {
+  transform: translateY(-0.35rem);
+  border-color: var(--flow);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.1);
+}
+
+.jh-flow-card:hover {
+  border-color: var(--flow);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.1);
+}
+
+.jh-flow-card .card-body {
+  padding: 1.05rem 1.05rem 1.15rem;
+}
+
+.jh-flow-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.jh-flow-ico {
+  width: 2.65rem;
+  height: 2.65rem;
+  border-radius: 0.85rem;
+  display: grid;
+  place-items: center;
+  color: var(--flow-deep);
+  background: var(--flow-soft);
+  transition: transform 0.25s var(--ease), background 0.25s var(--ease);
+}
+
+.jh-flow-card:hover .jh-flow-ico {
+  transform: scale(1.06);
+  background: color-mix(in srgb, var(--flow) 18%, #fff);
+}
+
+.jh-flow-ico svg {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.jh-flow-num {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--flow);
+  letter-spacing: 0.04em;
+}
+
+.jh-flow-card-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.02rem;
+  font-weight: 650;
+  color: #122018;
+  line-height: 1.3;
+}
+
+.jh-flow-card-text {
+  margin: 0;
+  color: var(--jh-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.jh-flow-connector {
+  flex: 0 0 2.1rem;
+  display: grid;
+  place-items: center;
+  position: relative;
+  color: var(--flow);
+  opacity: 0;
+  transform: scaleX(0.6);
+  transform-origin: left center;
+}
+
+.jh-flow.is-visible .jh-flow-connector {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.4s var(--ease), transform 0.45s var(--ease);
+  transition-delay: calc((var(--step-i, 1) + 0.5) * 0.07s);
+}
+
+.jh-flow-connector-line {
+  position: absolute;
+  left: 0.15rem;
+  right: 0.15rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--flow-border), var(--flow));
+}
+
+.jh-flow-connector-arrow {
+  position: relative;
+  z-index: 1;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border: 1.5px solid var(--flow);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.jh-flow-connector-arrow svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+@media (max-width: 960px) {
+  .jh-flow-track {
+    flex-direction: column;
+    overflow: visible;
+    padding: 0;
+    gap: 0;
+  }
+
+  .jh-flow-card {
+    flex: none;
+    width: 100%;
+  }
+
+  .jh-flow-connector {
+    flex: none;
+    width: 100%;
+    height: 2.1rem;
+    transform-origin: center top;
+  }
+
+  .jh-flow-connector-line {
+    left: 50%;
+    right: auto;
+    top: 0.2rem;
+    bottom: 0.2rem;
+    width: 2px;
+    height: auto;
+    background: linear-gradient(180deg, var(--flow-border), var(--flow));
+  }
+
+  .jh-flow-connector-arrow {
+    transform: rotate(90deg);
+  }
+}
+
 /* Split */
 .jh-split {
   display: grid;
@@ -900,11 +1307,27 @@ a:hover {
   border-bottom-color: var(--jh-gold);
 }
 
+.jh-auth-steps li.is-done {
+  color: var(--jh-forest);
+  border-bottom-color: rgba(10, 50, 39, 0.35);
+}
+
 .jh-auth-alert {
   background: rgba(155, 44, 44, 0.08);
   border: 1px solid rgba(155, 44, 44, 0.2);
   border-left: 4px solid #9b2c2c;
   color: #7a2222;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.15rem;
+  font-size: 0.92rem;
+  border-radius: var(--radius);
+}
+
+.jh-auth-info {
+  background: rgba(10, 50, 39, 0.06);
+  border: 1px solid rgba(10, 50, 39, 0.15);
+  border-left: 4px solid var(--jh-forest);
+  color: var(--jh-forest);
   padding: 0.85rem 1rem;
   margin-bottom: 1.15rem;
   font-size: 0.92rem;
@@ -1146,6 +1569,225 @@ a:hover {
   margin-top: 0;
 }
 
+/* Registration wizard */
+.jh-req {
+  color: #c62828;
+  font-weight: 700;
+}
+
+.jh-reg-progress {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.jh-reg-progress li {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  text-align: center;
+  cursor: pointer;
+  color: #7b8794;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.jh-reg-progress li span {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #d9e2ec;
+  background: #fff;
+  color: #5b6b63;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.jh-reg-progress li.is-active {
+  color: var(--jh-forest);
+}
+
+.jh-reg-progress li.is-active span {
+  background: var(--jh-forest);
+  border-color: var(--jh-forest);
+  color: #fff;
+}
+
+.jh-reg-progress li.is-done span {
+  background: rgba(23, 107, 79, 0.12);
+  border-color: var(--jh-forest);
+  color: var(--jh-forest);
+}
+
+.jh-reg-progress li small {
+  line-height: 1.2;
+}
+
+.jh-reg-step {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.jh-reg-step[hidden] {
+  display: none !important;
+}
+
+.jh-reg-step legend {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--jh-forest);
+  margin-bottom: 0.35rem;
+  float: none;
+  width: auto;
+  padding: 0;
+}
+
+.jh-reg-step-lead {
+  margin: 0 0 1rem;
+  color: var(--jh-muted);
+  font-size: 0.92rem;
+}
+
+.jh-field-error {
+  margin-top: 0.35rem;
+  color: #c62828;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.jh-auth-form .form-control.is-invalid,
+.jh-auth-form .form-select.is-invalid,
+.jh-auth-consent .form-check-input.is-invalid {
+  border-color: #c62828 !important;
+  box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.12);
+}
+
+.jh-auth-form .form-select.is-loading {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.jh-field-hint {
+  display: block;
+  margin-top: 0.4rem;
+  color: #7b8794;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.jh-reg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.35rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--jh-border);
+}
+
+.jh-reg-actions-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-left: auto;
+}
+
+.jh-reg-actions .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.jh-wizard-error {
+  margin: 0.85rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.7rem;
+  background: rgba(198, 40, 40, 0.08);
+  border: 1px solid rgba(198, 40, 40, 0.22);
+  color: #8a1f1f;
+  font-size: 0.88rem;
+}
+
+.jh-reg-review {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1.1rem;
+}
+
+.jh-reg-review-card {
+  border: 1px solid #e8eef0;
+  border-radius: 0.9rem;
+  padding: 0.95rem 1rem;
+  background: #f8faf9;
+}
+
+.jh-reg-review-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.jh-reg-review-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--jh-forest);
+}
+
+.jh-reg-review-card .btn-link {
+  color: #176b4f;
+  font-weight: 650;
+  text-decoration: none;
+  padding: 0;
+}
+
+.jh-reg-review-card .btn-link:hover {
+  text-decoration: underline;
+}
+
+.jh-reg-review-card dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem 1rem;
+}
+
+.jh-reg-review-card dt {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7b8794;
+  font-weight: 650;
+}
+
+.jh-reg-review-card dd {
+  margin: 0.15rem 0 0;
+  color: #122018;
+  font-size: 0.92rem;
+  word-break: break-word;
+}
+
+.jh-reg-review-full {
+  grid-column: 1 / -1;
+}
+
+.jh-auth-consent {
+  position: relative;
+}
+
+.jh-auth-consent .jh-field-error {
+  width: 100%;
+}
+
 .jh-auth--register .jh-auth-panel {
   align-items: start;
   padding-top: clamp(1.75rem, 4vw, 2.75rem);
@@ -1302,12 +1944,17 @@ a:hover {
   .jh-auth-panel-inner,
   .jh-process-step,
   .jh-reveal,
+  .jh-flow,
+  .jh-flow-card,
+  .jh-flow-connector,
   .btn-jh-primary,
   .btn-jh-secondary,
   .btn-jh-gold {
     animation: none !important;
     transition: none !important;
     opacity: 1 !important;
+    transform: none !important;
+  }
     transform: none !important;
   }
 }
@@ -1338,8 +1985,34 @@ a:hover {
     grid-template-columns: 1fr;
   }
 
+  .jh-reg-progress {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .jh-reg-progress li small {
+    font-size: 0.62rem;
+  }
+
   .jh-auth-grid {
     grid-template-columns: 1fr;
+  }
+
+  .jh-reg-review-card dl {
+    grid-template-columns: 1fr;
+  }
+
+  .jh-reg-actions,
+  .jh-reg-actions-main {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .jh-reg-actions-main {
+    margin-left: 0;
+  }
+
+  .jh-reg-actions .btn {
+    width: 100%;
   }
 
   .jh-auth-actions .jh-auth-submit,

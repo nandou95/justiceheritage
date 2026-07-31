@@ -24,8 +24,12 @@
             'complaints' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7h11M8 12h11M8 17h7M5 7h.01M5 12h.01M5 17h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
             'provincial' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 14 5-5 5 5M5 20h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
             'regional' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 9v11h6v-6h4v6h6V9l-8-6Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>',
+            'ministry' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M6 20V10l6-5 6 5v10M9 20v-5h6v5M10 10h.01M14 10h.01M12 13h.01" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
             'profile' => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 19a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+            'logout' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7V5a2 2 0 0 1 2-2h7v18h-7a2 2 0 0 1-2-2v-2M14 12H3m0 0 3-3m-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
             'bell' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18a3 3 0 0 1-6 0m9 0H6a2 2 0 0 1-1.6-3.2C5.5 13.2 7 11.8 7 9a5 5 0 0 1 10 0c0 2.8 1.5 4.2 2.6 5.8A2 2 0 0 1 18 18Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>',
+            'menu' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+            'close' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
         ];
 
         return $icons[$name] ?? '';
@@ -34,8 +38,20 @@
     <a class="skip-link" href="#portal-main"><?= esc(lang('Site.skip_to_content')) ?></a>
 
     <div class="jh-portal">
-        <aside class="jh-portal-sidebar" data-portal-nav>
-            <div class="jh-portal-menu-label"><?= esc(lang('Portal.menu')) ?></div>
+        <div class="jh-portal-backdrop" data-portal-backdrop hidden></div>
+
+        <aside id="portal-sidebar" class="jh-portal-sidebar" data-portal-nav>
+            <div class="jh-portal-sidebar-head">
+                <div class="jh-portal-menu-label"><?= esc(lang('Portal.menu')) ?></div>
+                <button
+                    class="jh-portal-close-btn"
+                    type="button"
+                    data-portal-close
+                    aria-label="<?= esc(lang('Portal.menu_close')) ?>"
+                >
+                    <?= $icon('close') ?>
+                </button>
+            </div>
 
             <nav class="jh-portal-nav" aria-label="<?= esc(lang('Portal.app_name')) ?>">
                 <a href="<?= site_url('portal') ?>" class="<?= ($active ?? '') === 'overview' ? 'is-active' : '' ?>">
@@ -58,9 +74,17 @@
                     <span class="jh-nav-ico"><?= $icon('regional') ?></span>
                     <?= esc(lang('Portal.nav_regional')) ?>
                 </a>
+                <a href="<?= site_url('portal/ministry') ?>" class="<?= ($active ?? '') === 'ministry' ? 'is-active' : '' ?>">
+                    <span class="jh-nav-ico"><?= $icon('ministry') ?></span>
+                    <?= esc(lang('Portal.nav_ministry')) ?>
+                </a>
                 <a href="<?= site_url('portal/profile') ?>" class="<?= ($active ?? '') === 'profile' ? 'is-active' : '' ?>">
                     <span class="jh-nav-ico"><?= $icon('profile') ?></span>
                     <?= esc(lang('Portal.nav_profile')) ?>
+                </a>
+                <a href="<?= site_url('logout') ?>">
+                    <span class="jh-nav-ico"><?= $icon('logout') ?></span>
+                    <?= esc(lang('Portal.nav_signout')) ?>
                 </a>
             </nav>
 
@@ -76,8 +100,16 @@
         <div class="jh-portal-mainwrap">
             <header class="jh-portal-top">
                 <div class="jh-portal-top-left">
-                    <button class="jh-portal-menu-btn" type="button" data-portal-toggle aria-expanded="false">
-                        <?= esc(lang('Portal.menu')) ?>
+                    <button
+                        class="jh-portal-menu-btn"
+                        type="button"
+                        data-portal-toggle
+                        aria-controls="portal-sidebar"
+                        aria-expanded="false"
+                        aria-label="<?= esc(lang('Portal.menu_open')) ?>"
+                    >
+                        <span class="jh-portal-menu-btn-ico" aria-hidden="true"><?= $icon('menu') ?></span>
+                        <span class="jh-portal-menu-btn-text"><?= esc(lang('Portal.menu')) ?></span>
                     </button>
                     <a class="jh-portal-top-brand" href="<?= site_url('portal') ?>">
                         <span class="jh-brand-mark" aria-hidden="true"></span>
@@ -104,7 +136,6 @@
             </header>
 
             <main id="portal-main" class="jh-portal-content">
-                <p class="jh-portal-demo"><?= esc(lang('Portal.demo_notice')) ?></p>
                 <?= $this->renderSection('content') ?>
             </main>
         </div>

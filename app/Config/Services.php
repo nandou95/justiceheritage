@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use Modules\Notification\Services\NotificationMailer;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -19,14 +20,12 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
-    /*
-     * public static function example($getShared = true)
-     * {
-     *     if ($getShared) {
-     *         return static::getSharedInstance('example');
-     *     }
-     *
-     *     return new \CodeIgniter\Example();
-     * }
-     */
+    public static function notifications(bool $getShared = true): NotificationMailer
+    {
+        if ($getShared) {
+            return static::getSharedInstance('notifications');
+        }
+
+        return new NotificationMailer();
+    }
 }

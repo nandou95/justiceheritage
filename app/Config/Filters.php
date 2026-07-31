@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Filters\ComplainantAuthFilter;
 use App\Filters\LocaleFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
@@ -35,7 +36,8 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
-        'locale'        => LocaleFilter::class,
+        'locale'           => LocaleFilter::class,
+        'complainantAuth'  => ComplainantAuthFilter::class,
     ];
 
     /**

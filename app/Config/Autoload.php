@@ -38,7 +38,14 @@ class Autoload extends AutoloadConfig
      * @var array<string, list<string>|string>
      */
     public $psr4 = [
-        APP_NAMESPACE => APPPATH,
+        APP_NAMESPACE              => APPPATH,
+        'Modules\Complaint'        => APPPATH . 'Modules/Complaint',
+        'Modules\Appeals'          => APPPATH . 'Modules/Appeals',
+        'Modules\Complainant'      => APPPATH . 'Modules/Complainant',
+        'Modules\CourtJurisdiction'=> APPPATH . 'Modules/CourtJurisdiction',
+        'Modules\Administration'   => APPPATH . 'Modules/Administration',
+        'Modules\Transfer'         => APPPATH . 'Modules/Transfer',
+        'Modules\Notification'     => APPPATH . 'Modules/Notification',
     ];
 
     /**

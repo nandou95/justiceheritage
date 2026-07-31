@@ -38,13 +38,17 @@
             <?php if (session()->getFlashdata('error')): ?>
                 <div class="jh-auth-alert" role="alert"><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>
+            <?php if (session()->getFlashdata('success')): ?>
+                <div class="jh-auth-info" role="status"><?= esc(session()->getFlashdata('success')) ?></div>
+            <?php endif; ?>
 
             <form class="jh-auth-form" method="post" action="<?= site_url('login') ?>" novalidate>
                 <?= csrf_field() ?>
 
                 <div class="jh-field">
-                    <label class="form-label" for="login"><?= esc(lang('Site.login_identifier')) ?></label>
-                    <input class="form-control" type="text" id="login" name="login" required autocomplete="username" placeholder=" ">
+                    <label class="form-label" for="username"><?= esc(lang('Site.login_identifier')) ?></label>
+                    <input class="form-control" type="text" id="username" name="username" required
+                           autocomplete="username" value="<?= esc(old('username')) ?>">
                 </div>
 
                 <div class="jh-field">

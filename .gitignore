@@ -3,3 +3,7 @@
 /.gitlab-ci.yml
 /composer.lock
 /vendor
+/writable/uploads/cni/*
+!/writable/uploads/cni/.gitkeep
+/writable/logs/*
+!/writable/logs/index.html
