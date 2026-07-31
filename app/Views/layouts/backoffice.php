@@ -15,7 +15,7 @@
     <?php
     $locale = service('request')->getLocale();
     $user   = $user ?? ['name' => 'Officer', 'role' => 'Staff'];
-    $active = $active ?? 'portal';
+    $active = $active ?? 'dashboard';
     $icon = static function (string $name): string {
         $map = [
             'grid' => '<svg viewBox="0 0 24 24"><path d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
@@ -39,6 +39,14 @@
             'external' => '<svg viewBox="0 0 24 24"><path d="M14 5h5v5M19 5l-9 9M10 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
             'star' => '<svg viewBox="0 0 24 24"><path d="m12 3.5 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16l-4.8 2.4.9-5.4L4.2 9.2l5.4-.8L12 3.5Z" fill="currentColor"/></svg>',
             'people' => '<svg viewBox="0 0 24 24"><path d="M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm9 1a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM3.5 19a5 5 0 0 1 10 0m2-1a4 4 0 0 1 5 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+            'badge' => '<svg viewBox="0 0 24 24"><path d="M12 3 4.5 6.5v4.8c0 4.7 3.2 8.2 7.5 9.7 4.3-1.5 7.5-5 7.5-9.7V6.5L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+            'lock' => '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+            'sliders' => '<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM8 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+            'layers' => '<svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Zm0 8 9 5-9 5-9-5 9-5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+            'steps' => '<svg viewBox="0 0 24 24"><path d="M4 18h6v-4H4v4Zm5-7h6V7H9v4Zm5-7h6V3h-6v1Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+            'status' => '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>',
+            'file' => '<svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v5h5M9 13h6M9 17h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+            'transfer' => '<svg viewBox="0 0 24 24"><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3-3m-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
         ];
 
         return $map[$name] ?? $map['grid'];
@@ -48,64 +56,30 @@
     <a class="skip-link" href="#bo-main">Skip</a>
 
     <div class="bo-shell">
-        <aside class="bo-sidebar" data-bo-nav>
-            <a class="bo-brand" href="<?= site_url('backoffice') ?>">
-                <span class="bo-brand-mark" aria-hidden="true"></span>
-                <span>
-                    <strong>JusticeHeritage</strong>
-                    <small><?= esc(lang('Backoffice.app_tag')) ?></small>
-                </span>
-            </a>
+        <div class="bo-nav-backdrop" data-bo-backdrop hidden></div>
 
-            <nav class="bo-nav" aria-label="<?= esc(lang('Backoffice.app_name')) ?>">
-                <p class="bo-nav-group"><?= esc(lang('Backoffice.nav_digital')) ?></p>
-                <a class="<?= $active === 'portal' ? 'is-active' : '' ?>" href="<?= site_url('backoffice') ?>">
-                    <span class="bo-ico"><?= $icon('grid') ?></span>
-                    <span><?= esc(lang('Backoffice.nav_portal')) ?></span>
-                    <span class="bo-chev"><?= $icon('chevron') ?></span>
+        <aside id="bo-sidebar-nav" class="bo-sidebar" data-bo-nav>
+            <div class="bo-sidebar-head">
+                <a class="bo-brand" href="<?= site_url('backoffice') ?>">
+                    <span class="bo-brand-mark" aria-hidden="true"></span>
+                    <span>
+                        <strong>JusticeHeritage</strong>
+                        <small><?= esc(lang('Backoffice.app_tag')) ?></small>
+                    </span>
                 </a>
+                <button class="bo-nav-close" type="button" data-bo-close aria-label="<?= esc(lang('Backoffice.close_menu')) ?>">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
 
-                <p class="bo-nav-group"><?= esc(lang('Backoffice.nav_cases')) ?></p>
-                <a href="<?= site_url('backoffice/module/reception') ?>">
-                    <span class="bo-ico"><?= $icon('inbox') ?></span>
-                    <span><?= esc(lang('Backoffice.nav_reception')) ?></span>
-                    <span class="bo-chev"><?= $icon('chevron') ?></span>
-                </a>
-                <a href="<?= site_url('backoffice/module/hearing') ?>">
-                    <span class="bo-ico"><?= $icon('calendar') ?></span>
-                    <span><?= esc(lang('Backoffice.nav_hearings')) ?></span>
-                    <span class="bo-chev"><?= $icon('chevron') ?></span>
-                </a>
-                <a href="<?= site_url('backoffice/module/judgment') ?>">
-                    <span class="bo-ico"><?= $icon('scale') ?></span>
-                    <span><?= esc(lang('Backoffice.nav_judgments')) ?></span>
-                    <span class="bo-chev"><?= $icon('chevron') ?></span>
-                </a>
-
-                <p class="bo-nav-group"><?= esc(lang('Backoffice.nav_governance')) ?></p>
-                <a href="<?= site_url('backoffice/module/users') ?>">
-                    <span class="bo-ico"><?= $icon('shield') ?></span>
-                    <span><?= esc(lang('Backoffice.nav_users')) ?></span>
-                    <span class="bo-chev"><?= $icon('chevron') ?></span>
-                </a>
-                <a href="<?= site_url('backoffice/module/jurisdictions') ?>">
-                    <span class="bo-ico"><?= $icon('map') ?></span>
-                    <span><?= esc(lang('Backoffice.nav_jurisdictions')) ?></span>
-                    <span class="bo-chev"><?= $icon('chevron') ?></span>
-                </a>
-                <a href="<?= site_url('backoffice/module/logs') ?>">
-                    <span class="bo-ico"><?= $icon('list') ?></span>
-                    <span><?= esc(lang('Backoffice.nav_logs')) ?></span>
-                    <span class="bo-chev"><?= $icon('chevron') ?></span>
-                </a>
-            </nav>
+            <?= view('partials/backoffice_nav', ['active' => $active, 'icon' => $icon]) ?>
 
             <div class="bo-sidebar-foot">
                 <a href="<?= site_url('/') ?>">
                     <span class="bo-ico"><?= $icon('help') ?></span>
                     <?= esc(lang('Backoffice.help_center')) ?>
                 </a>
-                <a class="bo-logout" href="<?= site_url('/') ?>">
+                <a class="bo-logout" href="<?= site_url('logout') ?>">
                     <span class="bo-ico"><?= $icon('logout') ?></span>
                     <?= esc(lang('Backoffice.logout')) ?>
                 </a>
@@ -115,7 +89,9 @@
         <div class="bo-mainwrap">
             <header class="bo-topbar">
                 <div class="bo-top-left">
-                    <button class="bo-menu-btn" type="button" data-bo-toggle aria-expanded="false"><?= esc(lang('Backoffice.menu')) ?></button>
+                    <button class="bo-menu-btn" type="button" data-bo-toggle aria-expanded="false" aria-controls="bo-sidebar-nav">
+                        <?= esc(lang('Backoffice.menu')) ?>
+                    </button>
                     <a class="bo-back" href="<?= site_url('backoffice') ?>">
                         <span class="bo-ico"><?= $icon('back') ?></span>
                         <?= esc(lang('Backoffice.back_dashboard')) ?>
