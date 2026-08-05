@@ -39,6 +39,16 @@ return [
     'appeal_submitted_body'      => 'Votre appel {0} pour le dossier {1} a été soumis avec succès.',
     'cta_portal'                 => 'Ouvrir le portail du plaignant',
 
+    'subject_summons_issued'     => 'Convocation émise pour le dossier {0}',
+    'summons_issued_body'        => 'Une convocation a été émise pour le dossier {0}. Date d’audience : {1} à {2}. Lieu : {3}.',
+
+    'subject_hearing_processed'  => 'Mise à jour d’audience — {0}',
+    'hearing_held_body'          => 'L’audience relative à votre dossier a eu lieu. Consultez le statut dans votre portail.',
+    'hearing_postponed_body'     => 'L’audience relative à votre dossier a été reportée. Consultez le statut dans votre portail.',
+
+    'subject_verdict_issued'     => 'Verdict rendu pour le dossier {0}',
+    'verdict_issued_body'        => 'Un verdict a été rendu pour le dossier {0} le {1}. Date limite de recours : {2}.',
+
     'test_subject'               => 'Test SMTP JusticeHeritage',
     'test_body'                  => 'Ceci est un e-mail de test confirmant que les notifications SMTP sont correctement configurées.',
 ];

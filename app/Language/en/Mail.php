@@ -39,6 +39,16 @@ return [
     'appeal_submitted_body'      => 'Your {0} appeal for case {1} has been submitted successfully.',
     'cta_portal'                 => 'Open complainant portal',
 
+    'subject_summons_issued'     => 'Summons issued for case {0}',
+    'summons_issued_body'        => 'A summons has been issued for case {0}. Hearing date: {1} at {2}. Venue: {3}.',
+
+    'subject_hearing_processed'  => 'Hearing update — {0}',
+    'hearing_held_body'          => 'The hearing for your case has been held. You can review the case status in your portal.',
+    'hearing_postponed_body'     => 'The hearing for your case has been postponed. You can review the case status in your portal.',
+
+    'subject_verdict_issued'     => 'Verdict issued for case {0}',
+    'verdict_issued_body'        => 'A verdict has been issued for case {0} on {1}. Appeal deadline: {2}.',
+
     'test_subject'               => 'JusticeHeritage SMTP test',
     'test_body'                  => 'This is a test email confirming that SMTP notifications are configured correctly.',
 ];

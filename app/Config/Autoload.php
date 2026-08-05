@@ -44,8 +44,13 @@ class Autoload extends AutoloadConfig
         'Modules\Complainant'      => APPPATH . 'Modules/Complainant',
         'Modules\CourtJurisdiction'=> APPPATH . 'Modules/CourtJurisdiction',
         'Modules\Administration'   => APPPATH . 'Modules/Administration',
+        'Modules\People'           => APPPATH . 'Modules/People',
+        'Modules\Summons'          => APPPATH . 'Modules/Summons',
+        'Modules\Hearings'         => APPPATH . 'Modules/Hearings',
+        'Modules\Verdicts'         => APPPATH . 'Modules/Verdicts',
         'Modules\Transfer'         => APPPATH . 'Modules/Transfer',
         'Modules\Notification'     => APPPATH . 'Modules/Notification',
+        'Modules\AuditLog'         => APPPATH . 'Modules/AuditLog',
     ];
 
     /**

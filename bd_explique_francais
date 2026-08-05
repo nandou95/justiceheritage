@@ -1,0 +1,76 @@
+Base des donnees
+
+Structure des tables schemas par schemas:
+
+A. schemas : administration 
+1. Table de gestion des utilisateurs : "SELECT utilisateur_id,nom_utilisateur,prenom_utilisateur,numero_cni,numero_matricule,telephone,email,date_naissance,profil_id,statut_compte_id,juridiction_id,sexe_id,province_naissance_id,commune_naissance_id,zone_naissance_id,colline_naissance_id,user_name,mot_de_passe_hash,derniere_connexion,created_at,updated_at,code_authentification FROM administration.utilisateur;"
+2. Table de gestion des role (profil) : "SELECT profil_id, code_profil, libelle_profil, description_profil, created_at,is_active FROM administration.profil;"
+3. Table de gestion des permission : "SELECT permission_id, description_permission, url_route, is_active FROM administration.permission;"
+4. Table de liaison entre les permissions et les roles (profil) : "SELECT profil_permission_id, profil_id, permission_id, is_active FROM administration.profil_permission;"
+5. Table de gestion des statut des comptes : "SELECT statut_compte_id, desc_statut_compte FROM administration.statut_compte;"
+
+B. schemas : audit_log
+1. Table de gestion des actions des utilisateurs : "SELECT audit_log_id, utilisateur_id, action, table_cible, enregistrement_id, anciennes_valeurs, nouvelles_valeurs, adresse_ip, user_agent, created_at FROM audit_log.audit_log;"
+2. Table de gestion des actions des plaignants : "SELECT audit_log_personne_id, personne_id, action, table_cible, enregistrement_id, anciennes_valeurs, nouvelles_valeurs, adresse_ip, user_agent, created_at FROM audit_log.audit_log_personne;"
+
+C. schemas : juridiction
+1. Table de gestion des niveaux des juridictions : "SELECT niveau_juridiction_id, desc_niveau_juridiction,is_active,is_recours FROM juridiction.niveau_juridiction;"
+2. Table de gestion des juridictions : "SELECT juridiction_id, code_juridiction, nom_juridiction, niveau_juridiction_id, adresse, telephone, email, province_id, commune_id, zone_id, colline_id, is_active, created_at, est_dernier FROM juridiction.juridiction;"
+3. Table qui gere la configuration des niveaux de juridiction : "SELECT configuration_niveau_juridiction_id, niveau_juridiction_id, niveau_juridiction_parent_id, is_active FROM juridiction.configuration_niveau_juridiction;"
+4. Table qui gere la configuration des juridictions : "SELECT configuration_juridiction_id, juridiction_id, juridiction_parent_id, is_active FROM juridiction.configuration_juridiction;"
+
+d. schemas : localite
+1. Table de gestion des provinces : "SELECT province_id, province_name, province_latitude, province_longitude, is_active FROM localite.localite_province;"
+2. Table de gestion des communes : "SELECT commune_id, commune_name, province_id, commune_latitude, commune_longitude FROM localite.localite_commune;"
+3. Table de gestion des zones : "SELECT zone_id, zone_name, commune_id, zone_latitude, zone_longitude FROM localite.localite_zone;"
+4. Table de gestion des collines : "SELECT colline_id, colline_name, zone_id, colline_latitude, colline_longitude FROM localite.localite_colline;"
+
+e. schemas : notification
+1. Table de gestion des canals de notification : "SELECT canal_notification_id, description_canal_notification, is_active FROM notification.canal_notification;"
+2. Table de gestion des statuts des notifications : "SELECT statut_notification_id, description_statut_notification FROM notification.statut_notification;"
+3. Table de gestion des notifications des plaignants : "SELECT notification_personne_id, personne_id, canal_notification_id, sujet, corps, plainte_id, statut_notification_id, envoye_le, lu_le, created_at FROM notification.notification_personne;"
+4. Table de gestion des notifications des utilisateurs : "SELECT notification_utilisateur_id, utilisateur_id, canal_notification_id, sujet, corps, statut_notification_id, envoye_le, lu_le, created_at FROM notification.notification_utilisateur;"
+
+f. schemas : plaignant
+1. Table de gestion des plaignants et des defendants : "SELECT personne_id, nom_personne, prenom_personne, date_naissance, email, telephone, user_name, mot_de_passe_hash, code_authentification, province_naissance_id, commune_naissance_id, zone_naissance_id, colline_naissance_id, numero_cni, upload_cni, create_at, sexe_id, adresse_residence, code_authentification_expire_at FROM plaignant.personne;"
+2. Table de gestion de ce qu'une personne represente dans une plainte : "SELECT plainte_role_personne_id, plainte_id, personne_id, role_personne_id, est_recourant, utilisateur_id, date_ajout, created_at FROM plaignant.plainte_role_personne;"
+3. Table de gestion de ce qu'une personne peut etre dans une plainte : "SELECT role_personne_id, description_role_personne FROM plaignant.role_personne;"
+3. Table de gestion 
+
+g. schemas : plainte
+1. Table de gestion des plaintes : "SELECT plainte_id, numero_dossier, juridiction_id, niveau_juridiction_id, statut_plainte_id, objet, description, date_depot, enregistre_par, created_at, updated_at, etape_plainte_id,est_cree_par_plaigant, is_recours FROM plainte.plainte;"
+2. Table de gestion des documents des plaintes : "SELECT document_plainte_id, plainte_id, type_document_id, plainte_role_personne_id, nom_fichier, fichier_chemin_stockage, taille_octets, hash_sha256, niveau_juridiction_id, date_depot, depose_par_utilisateur, description, created_at FROM plainte.document_plainte;"
+3. Table de gestion des types des documents : "SELECT type_document_id, code_type_document, libelle_type_document, niveau_juridiction_id, is_obligatoire, is_actif, created_at FROM plainte.type_document;"
+4. Table de gestion des statuts des plaintes : "SELECT statut_plainte_id, description_statut_plainte,is_active FROM plainte.statut_plainte;"
+5. Table de gestion de liaison des plaintes et des parcelles concernes : "SELECT plainte_parcelle_id, superficie_maitre_carreau, localisation_parcelle, plainte_id, province_parcelle_id, commune_parcelle_id, zone_parcelle_id, colline_parcelle_id, created_at FROM plainte.plainte_parcelle;"
+6. Table de gestion des etapes des plaintes : "SELECT etape_plainte_id, description_etape_plainte, niveau_juridiction_id, is_active,is_convocation, is_audience FROM plainte.etape_plainte;"
+7. Table de gestion des configurations des etapes des plaintes : "SELECT configuration_etape_plainte_id, etape_plainte_actuel_id,etape_plainte_suivant_id,url_route,is_active FROM plainte.configuration_etape_plainte;"
+8. Table de gestion de liaison entre etape et le profil : "SELECT etape_plainte_profil_id, etape_plainte_id, profil_id, is_active FROM plainte.etape_plainte_profil;"
+9. Table de gestion des types des plaintes : "SELECT type_plainte_id, description_type_plainte, is_active FROM plainte.type_plainte;";
+
+h. schemas : recours
+1. Table de gestion des recours : "SELECT recours_id, verdict_conteste_id, nouvelle_plainte_id, date_recours, dans_les_delais, enregistre_par, created_at,niveau_juridiction_id,plainte_parent_id,juridiction_id FROM recours.recours;"
+2. Table de gestion de laison entre les recours et les personnes : "SELECT recours_partie_id, recours_id, role_personne_id, created_at FROM recours.recours_partie;"
+
+i. schemas : transfert
+1. Table de gestion des statuts de transferts des dossiers : "SELECT statut_transfert_dossier_id, description_statut_transfert_dossier FROM transfert.statut_transfert_dossier;"
+2. Table de gestion des transferts des dossiers : "SELECT transfert_dossier_id, plainte_id, juridiction_source_id, juridiction_dest_id, numero_dossier_dest, date_transfert, transfere_par, recu_par, date_reception, statut_transfert_dossier_id, observations, created_at FROM transfert.transfert_dossier;"
+
+
+j. schemas : verdict
+1. Table de gestion des types des verdict : "SELECT type_verdict_id, description_type_verdict FROM verdict.type_verdict;"
+2. Table de gestion des verdict : "SELECT verdict_id, audience_plainte_id, niveau_juridiction_id, type_verdict_id, date_verdict, resume, dispositif, date_limite_recours, recours_exerce, created_at, juridiction_id, upload_rapport_verdict FROM verdict.verdict;"
+3. Table de gestion de liaison entre les verdicts et les utilisateurs : "SELECT verdict_affectation_juge_id, verdict_id, utilisateur_id, profil_id FROM verdict.verdict_affectation_juge"
+
+k. schemas : audience : Gestion des audiences
+1. Table de gestion des audiences : "SELECT audience_id, niveau_juridiction_id, date_audience, heure_audience, juridiction_audience_id, province_audience_id, commune_audience_id, zone_audience_id, colline_audience_id, lieu_audience, date_tenue, heure_debut, heure_fin, juge_id, greffier_id, statut_audience_id, motif_report, rapport, rapport_valide, created_at, updated_at FROM audience.audience;"
+2. Table de liaison des audiences et les plaintes : "SELECT audience_plainte_id, audience_id, plainte_id, convocation_id, motif_report, rapport, rapport_valide, statut_audience_id, created_at FROM audience.audience_plainte;"
+3. Table de gestion des documents qu'on fournie a une plainte lors d'une audience : "SELECT document_audience_id, observation, audience_plainte_id, apporte_par_partie, enregistre_par, enregistre_le FROM audience.document_audience;"
+4. Table de gestion des presences des personnes a l'audience : "SELECT presence_audience_id, audience_plainte_id, plainte_role_personne_id, utilisateur_id, present, observations, created_at, personne_id FROM audience.presence_audience;"
+5. Table de gestion des status des audiences : "SELECT statut_audience_id, description_statut_audience FROM audience.statut_audience;"
+6. Table de gestion des affectations des magistrats et greffiers qui vont gerer les audiences : "SELECT audience_affection_id, audience_id, profil_id, utilisateur_affecte_id, utilisateur_id, is_active, create_at FROM audience.audience_affection;"
+
+l. schemas : convocation
+1. Table de gestion des convocations : "SELECT convocation_id, plainte_id, niveau_juridiction_id, date_audience, heure_audience, province_lieu_audience_id, commune_lieu_audience_id, zone_lieu_audience_id, colline_lieu_audience_id, lieu_audience, emise_le, emise_par, statut_convocation_id, observations, created_at, juridiction_lieu_audience_id FROM convocation.convocation;"
+2. Table de gestion de liaisson des convocation et les personnes concernees : "SELECT convocation_destinataire_id, convocation_id, plainte_role_personne_id, date_remise, remis_par, statut_convocation_id, created_at FROM convocation.convocation_destinataire;"
+3. Table de gestion des statuts de convocation : "SELECT statut_convocation_id, description_statut_convocation FROM convocation.statut_convocation;"

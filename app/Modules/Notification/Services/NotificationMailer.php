@@ -162,6 +162,33 @@ class NotificationMailer
         );
     }
 
+    public function sendSummonsIssued(
+        string $toEmail,
+        string $toName,
+        string $caseNumber,
+        string $complaintTitle,
+        string $hearingDate,
+        string $hearingTime,
+        string $venue
+    ): bool {
+        return $this->send(
+            type: 'summons_issued',
+            toEmail: $toEmail,
+            toName: $toName,
+            subject: lang('Mail.subject_summons_issued', [$caseNumber]),
+            view: 'Modules\Notification\Views\emails\summons_issued',
+            data: [
+                'name'            => $toName,
+                'complaintNumber' => $caseNumber,
+                'complaintTitle'  => $complaintTitle,
+                'hearingDate'     => $hearingDate,
+                'hearingTime'     => $hearingTime,
+                'venue'           => $venue,
+                'portalUrl'       => site_url('portal/complaints'),
+            ]
+        );
+    }
+
     public function sendPasswordReset(string $toEmail, string $toName, string $resetUrl): bool
     {
         return $this->send(
