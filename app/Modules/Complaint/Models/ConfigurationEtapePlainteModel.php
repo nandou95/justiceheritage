@@ -14,6 +14,7 @@ class ConfigurationEtapePlainteModel extends Model
     protected $allowedFields    = [
         'etape_plainte_actuel_id',
         'etape_plainte_suivant_id',
+        'etape_plainte_action_id',
         'url_route',
         'is_active',
     ];
@@ -28,6 +29,7 @@ class ConfigurationEtapePlainteModel extends Model
                 c.configuration_etape_plainte_id,
                 c.etape_plainte_actuel_id,
                 c.etape_plainte_suivant_id,
+                c.etape_plainte_action_id,
                 c.url_route,
                 c.is_active,
                 ea.description_etape_plainte AS etape_actuel,
@@ -36,18 +38,7 @@ class ConfigurationEtapePlainteModel extends Model
                 es.description_etape_plainte AS etape_suivant,
                 es.niveau_juridiction_id AS niveau_suivant_id,
                 njs.desc_niveau_juridiction AS niveau_suivant,
-                (
-                    SELECT COUNT(*)
-                    FROM plainte.etape_plainte_profil epp
-                    WHERE epp.etape_plainte_id = c.etape_plainte_actuel_id
-                      AND (epp.is_active IS NULL OR epp.is_active = TRUE)
-                ) AS profiles_actuel_count,
-                (
-                    SELECT COUNT(*)
-                    FROM plainte.etape_plainte_profil epp2
-                    WHERE epp2.etape_plainte_id = c.etape_plainte_suivant_id
-                      AND (epp2.is_active IS NULL OR epp2.is_active = TRUE)
-                ) AS profiles_suivant_count
+                acta.desc_etape_plainte_action AS action_actuel
             FROM plainte.configuration_etape_plainte AS c
             JOIN plainte.etape_plainte AS ea
                 ON ea.etape_plainte_id = c.etape_plainte_actuel_id
@@ -57,6 +48,8 @@ class ConfigurationEtapePlainteModel extends Model
                 ON es.etape_plainte_id = c.etape_plainte_suivant_id
             LEFT JOIN juridiction.niveau_juridiction AS njs
                 ON njs.niveau_juridiction_id = es.niveau_juridiction_id
+            LEFT JOIN plainte.etape_plainte_action AS acta
+                ON acta.etape_plainte_action_id = c.etape_plainte_action_id
             WHERE 1 = 1
         SQL;
 
@@ -76,6 +69,22 @@ class ConfigurationEtapePlainteModel extends Model
         return $this->db->query($sql, $params)->getResultArray();
     }
 
+    public function transitionExists(int $actuelId, int $actionId, int $suivantId, ?int $ignoreId = null): bool
+    {
+        $builder = $this->builder()
+            ->where('etape_plainte_actuel_id', $actuelId)
+            ->where('etape_plainte_action_id', $actionId)
+            ->where('etape_plainte_suivant_id', $suivantId);
+        if ($ignoreId) {
+            $builder->where('configuration_etape_plainte_id !=', $ignoreId);
+        }
+
+        return $builder->countAllResults() > 0;
+    }
+
+    /**
+     * @deprecated Use transitionExists()
+     */
     public function pairExists(int $actuelId, int $suivantId, ?int $ignoreId = null): bool
     {
         $builder = $this->builder()

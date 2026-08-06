@@ -57,10 +57,12 @@ $selectedMap = array_fill_keys($selectedIds, true);
                         <i class="bi bi-search" aria-hidden="true"></i>
                         <input type="search" class="form-control" data-perm-search placeholder="<?= esc(lang('Backoffice.profiles_permissions_search'), 'attr') ?>" aria-label="<?= esc(lang('Backoffice.profiles_permissions_search')) ?>">
                     </label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="perm_select_all" data-perm-select-all>
-                        <label class="form-check-label" for="perm_select_all"><?= esc(lang('Backoffice.profiles_permissions_select_all')) ?></label>
-                    </div>
+                    <button class="btn btn-sm btn-bo-secondary" type="button" data-perm-select-all>
+                        <?= esc(lang('Backoffice.profiles_permissions_select_all')) ?>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-perm-deselect-all>
+                        <?= esc(lang('Backoffice.profiles_permissions_deselect_all')) ?>
+                    </button>
                     <span class="bo-perm-selected-count" data-perm-selected-count>0</span>
                 </div>
             </div>
@@ -68,38 +70,77 @@ $selectedMap = array_fill_keys($selectedIds, true);
             <?php if (empty($permissionGroups)): ?>
                 <p class="text-muted mb-0"><?= esc(lang('Backoffice.profiles_permissions_empty')) ?></p>
             <?php else: ?>
-                <div class="bo-perm-groups">
-                    <?php foreach ($permissionGroups as $group): ?>
-                        <section class="bo-perm-group" data-perm-group>
-                            <header class="bo-perm-group-head">
-                                <h3><?= esc($group['module']) ?></h3>
-                                <button class="btn btn-sm btn-bo-secondary" type="button" data-perm-group-toggle>
-                                    <?= esc(lang('Backoffice.profiles_permissions_select_group')) ?>
+                <div class="accordion bo-perm-groups" id="profilePermAccordion">
+                    <?php foreach ($permissionGroups as $index => $group): ?>
+                        <?php
+                        $groupKey   = preg_replace('/[^a-z0-9_-]+/i', '-', (string) ($group['module_key'] ?? $index)) ?: (string) $index;
+                        $collapseId = 'perm-group-' . $groupKey;
+                        $headingId  = $collapseId . '-heading';
+                        $permCount  = count($group['permissions'] ?? []);
+                        $moduleTitle = (string) ($group['module'] ?? '');
+                        ?>
+                        <div class="accordion-item card bo-perm-group" data-perm-group data-group-title="<?= esc(mb_strtolower($moduleTitle), 'attr') ?>">
+                            <h3 class="accordion-header bo-perm-group-head" id="<?= esc($headingId, 'attr') ?>">
+                                <button class="accordion-button<?= $index === 0 ? '' : ' collapsed' ?>" type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#<?= esc($collapseId, 'attr') ?>"
+                                        aria-expanded="<?= $index === 0 ? 'true' : 'false' ?>"
+                                        aria-controls="<?= esc($collapseId, 'attr') ?>">
+                                    <span class="bo-perm-group-title"><?= esc($moduleTitle) ?></span>
+                                    <span class="badge text-bg-light bo-perm-group-count ms-2">
+                                        <?= esc(lang('Backoffice.profiles_permissions_count', [$permCount])) ?>
+                                    </span>
                                 </button>
-                            </header>
-                            <div class="bo-perm-list">
-                                <?php foreach ($group['permissions'] as $perm): ?>
-                                    <?php $checked = isset($selectedMap[(int) $perm['id']]); ?>
-                                    <label class="bo-perm-item<?= $checked ? ' is-selected' : '' ?>" data-perm-item data-search="<?= esc(mb_strtolower(($perm['description'] ?? '') . ' ' . ($perm['url_route'] ?? '')), 'attr') ?>">
-                                        <input
-                                            class="form-check-input"
-                                            type="checkbox"
-                                            name="permission_ids[]"
-                                            value="<?= esc($perm['id']) ?>"
-                                            data-perm-checkbox
-                                            <?= $checked ? 'checked' : '' ?>
-                                        >
-                                        <span class="bo-perm-item-body">
-                                            <strong><?= esc($perm['description']) ?></strong>
-                                            <code><?= esc($perm['url_route']) ?></code>
-                                            <span class="bo-status-pill <?= ! empty($perm['is_active']) ? 'is-active' : 'is-inactive' ?>">
-                                                <?= esc($perm['status']) ?>
-                                            </span>
-                                        </span>
-                                    </label>
-                                <?php endforeach; ?>
+                            </h3>
+                            <div id="<?= esc($collapseId, 'attr') ?>"
+                                 class="accordion-collapse collapse<?= $index === 0 ? ' show' : '' ?>"
+                                 aria-labelledby="<?= esc($headingId, 'attr') ?>">
+                                <div class="accordion-body">
+                                    <div class="bo-perm-group-actions">
+                                        <button class="btn btn-sm btn-bo-secondary" type="button" data-perm-group-select>
+                                            <?= esc(lang('Backoffice.profiles_permissions_select_group')) ?>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-perm-group-deselect>
+                                            <?= esc(lang('Backoffice.profiles_permissions_deselect_group')) ?>
+                                        </button>
+                                    </div>
+
+                                    <div class="row g-3 bo-perm-list">
+                                        <?php foreach ($group['permissions'] as $perm): ?>
+                                            <?php
+                                            $checked = isset($selectedMap[(int) $perm['id']]);
+                                            $enabled = ! empty($perm['is_active']);
+                                            $search  = mb_strtolower(
+                                                $moduleTitle . ' '
+                                                . ($perm['description'] ?? '') . ' '
+                                                . ($perm['url_route'] ?? '')
+                                            );
+                                            ?>
+                                            <div class="col-12 col-md-6 col-xl-3" data-perm-item data-search="<?= esc($search, 'attr') ?>">
+                                                <label class="bo-perm-item<?= $checked ? ' is-selected' : '' ?><?= $enabled ? '' : ' is-disabled' ?>">
+                                                    <input
+                                                        class="form-check-input"
+                                                        type="checkbox"
+                                                        name="permission_ids[]"
+                                                        value="<?= esc($perm['id']) ?>"
+                                                        data-perm-checkbox
+                                                        <?= $checked ? 'checked' : '' ?>
+                                                        <?= $enabled ? '' : 'disabled' ?>
+                                                    >
+                                                    <span class="bo-perm-item-body">
+                                                        <strong><?= esc($perm['description']) ?></strong>
+                                                        <code><?= esc($perm['url_route']) ?></code>
+                                                        <span class="bo-status-pill <?= $enabled ? 'is-active' : 'is-inactive' ?>">
+                                                            <?= esc($perm['status']) ?>
+                                                        </span>
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
                             </div>
-                        </section>
+                        </div>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>

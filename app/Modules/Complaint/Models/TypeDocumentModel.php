@@ -76,11 +76,14 @@ class TypeDocumentModel extends Model
 
     public function codeExists(string $code, ?int $ignoreId = null): bool
     {
-        $builder = $this->builder()->where('LOWER(code_type_document) =', mb_strtolower($code), false);
+        $sql = 'SELECT 1 FROM plainte.type_document WHERE LOWER(code_type_document) = LOWER(?)';
+        $params = [$code];
         if ($ignoreId) {
-            $builder->where('type_document_id !=', $ignoreId);
+            $sql .= ' AND type_document_id != ?';
+            $params[] = $ignoreId;
         }
+        $sql .= ' LIMIT 1';
 
-        return $builder->countAllResults() > 0;
+        return $this->db->query($sql, $params)->getFirstRow() !== null;
     }
 }

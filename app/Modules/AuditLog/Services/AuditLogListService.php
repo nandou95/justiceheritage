@@ -245,7 +245,11 @@ class AuditLogListService
                     u.email AS user_email,
                     u.telephone AS user_phone,
                     u.numero_matricule AS user_matricule,
-                    u.user_name AS user_username,
+                    COALESCE(
+                        NULLIF(TRIM(u.email), ''),
+                        NULLIF(TRIM(u.numero_cni), ''),
+                        NULLIF(TRIM(u.numero_matricule), '')
+                    ) AS user_username,
                     pr.libelle_profil AS profile_name,
                     j.nom_juridiction AS court_name
                 ", false)

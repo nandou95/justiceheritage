@@ -10,18 +10,19 @@
         <h1><?= esc(lang('Backoffice.users_title')) ?></h1>
         <p><?= esc(lang('Backoffice.users_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/users/create')): ?>
     <a class="btn btn-bo-primary" href="<?= site_url('backoffice/users/create') ?>">
         <i class="bi bi-plus-lg" aria-hidden="true"></i>
         <?= esc(lang('Backoffice.users_new')) ?>
     </a>
+    <?php endif; ?>
 </section>
 
 <section class="bo-panel bo-crud-panel">
     <form class="bo-filters" method="get" action="<?= site_url('backoffice/users') ?>" data-bo-user-filters
-          data-api-communes="<?= esc(site_url('api/communes'), 'attr') ?>"
-          data-api-jurisdictions="<?= esc(site_url('backoffice/api/jurisdictions'), 'attr') ?>">
+          data-api-communes="<?= esc(site_url('api/communes'), 'attr') ?>">
         <div class="row g-2">
-            <div class="col-12 col-md-6 col-xl-2">
+            <div class="col-12 col-md-6 col-xl-3">
                 <label class="form-label" for="filter_province"><?= esc(lang('Backoffice.filter_province')) ?></label>
                 <select class="form-select" id="filter_province" name="province_id" data-filter="province">
                     <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
@@ -32,23 +33,12 @@
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-12 col-md-6 col-xl-2">
+            <div class="col-12 col-md-6 col-xl-3">
                 <label class="form-label" for="filter_commune"><?= esc(lang('Backoffice.filter_commune')) ?></label>
                 <select class="form-select" id="filter_commune" name="commune_id" data-filter="commune">
                     <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
                     <?php foreach ($communes as $opt): ?>
                         <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['commune_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
-                            <?= esc($opt['label']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label" for="filter_niveau"><?= esc(lang('Backoffice.filter_jurisdiction_level')) ?></label>
-                <select class="form-select" id="filter_niveau" name="niveau_juridiction_id" data-filter="niveau">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($niveaux as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['niveau_juridiction_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
                             <?= esc($opt['label']) ?>
                         </option>
                     <?php endforeach; ?>
@@ -65,20 +55,16 @@
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-12 col-md-6 col-xl-2">
+            <div class="col-12 col-md-6 col-xl-3">
                 <label class="form-label" for="filter_status"><?= esc(lang('Backoffice.filter_account_status')) ?></label>
-                <select class="form-select" id="filter_status" name="account_status">
+                <select class="form-select" id="filter_status" name="statut_compte_id" data-filter="status">
                     <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <option value="true" <?= ($filters['account_status'] ?? '') === 'true' || ($filters['account_status'] ?? '') === '1' ? 'selected' : '' ?>>
-                        <?= esc(lang('Backoffice.status_active')) ?>
-                    </option>
-                    <option value="false" <?= ($filters['account_status'] ?? '') === 'false' || ($filters['account_status'] ?? '') === '0' ? 'selected' : '' ?>>
-                        <?= esc(lang('Backoffice.status_inactive')) ?>
-                    </option>
+                    <?php foreach ($accountStatuses as $opt): ?>
+                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['statut_compte_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
+                            <?= esc($opt['label']) ?>
+                        </option>
+                    <?php endforeach; ?>
                 </select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-1 d-flex align-items-end">
-                <button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button>
             </div>
         </div>
     </form>
@@ -123,10 +109,13 @@
                             </td>
                             <td>
                                 <div class="bo-action-group">
+                                    <?php if (can_access('backoffice/users/edit')): ?>
                                     <a class="btn btn-bo-icon" href="<?= site_url('backoffice/users/' . $row['id'] . '/edit') ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.users_action_edit'), 'attr') ?>">
                                         <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                         <span class="visually-hidden"><?= esc(lang('Backoffice.users_action_edit')) ?></span>
                                     </a>
+                                    <?php endif; ?>
+                                    <?php if (can_access('backoffice/users/toggle-status')): ?>
                                     <button
                                         class="btn btn-bo-icon <?= $row['is_active'] ? 'is-danger' : 'is-success' ?>"
                                         type="button"
@@ -140,10 +129,13 @@
                                         <i class="bi <?= $row['is_active'] ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i>
                                         <span class="visually-hidden"><?= esc($row['is_active'] ? lang('Backoffice.users_action_deactivate') : lang('Backoffice.users_action_activate')) ?></span>
                                     </button>
+                                    <?php endif; ?>
+                                    <?php if (can_access('backoffice/users/show')): ?>
                                     <a class="btn btn-bo-icon" href="<?= site_url('backoffice/users/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.users_action_view'), 'attr') ?>">
                                         <i class="bi bi-eye" aria-hidden="true"></i>
                                         <span class="visually-hidden"><?= esc(lang('Backoffice.users_action_view')) ?></span>
                                     </a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>

@@ -21,8 +21,12 @@ $period = trim(substr((string) ($record['heure_debut'] ?? ''), 0, 5) . ' / ' . s
     </div>
     <div class="bo-crud-head-actions">
         <a class="btn btn-bo-secondary" href="<?= site_url('backoffice/hearings') ?>"><i class="bi bi-arrow-left"></i> <?= esc(lang('Backoffice.hrg_back_list')) ?></a>
+        <?php if (can_access('backoffice/hearings/assign')): ?>
         <a class="btn btn-bo-secondary" href="<?= site_url('backoffice/hearings/' . (int) $record['audience_id'] . '/assignments') ?>"><i class="bi bi-people"></i> <?= esc(lang('Backoffice.hrg_action_assign')) ?></a>
+        <?php endif; ?>
+        <?php if (can_access('backoffice/hearings/process')): ?>
         <a class="btn btn-bo-primary" href="<?= site_url('backoffice/hearings/' . (int) $record['audience_id'] . '/process') ?>"><i class="bi bi-clipboard-check"></i> <?= esc(lang('Backoffice.hrg_action_process')) ?></a>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -38,7 +42,7 @@ $period = trim(substr((string) ($record['heure_debut'] ?? ''), 0, 5) . ' / ' . s
         <div><dt><?= esc(lang('Backoffice.hrg_field_actual_date')) ?></dt><dd><?= esc($record['date_tenue'] ?? '—') ?></dd></div>
         <div><dt><?= esc(lang('Backoffice.hrg_field_postpone_reason')) ?></dt><dd><?= esc($record['motif_report'] ?? '—') ?></dd></div>
         <div><dt><?= esc(lang('Backoffice.hrg_field_report')) ?></dt><dd><?= esc($record['rapport'] ?? '—') ?></dd></div>
-        <div><dt><?= esc(lang('Backoffice.hrg_field_report_validated')) ?></dt><dd><?= esc(filter_var($record['rapport_valide'] ?? false, FILTER_VALIDATE_BOOLEAN) ? lang('Backoffice.yes') : lang('Backoffice.no')) ?></dd></div>
+        <div><dt><?= esc(lang('Backoffice.hrg_field_report_validated')) ?></dt><dd><?= esc(db_bool($record['rapport_valide'] ?? false) ? lang('Backoffice.yes') : lang('Backoffice.no')) ?></dd></div>
     </dl>
 </section>
 
@@ -47,7 +51,7 @@ $tables = [
     ['id' => 'hrg-staff-table', 'title' => lang('Backoffice.hrg_section_staff'), 'headers' => [lang('Backoffice.hrg_assign_col_name'), lang('Backoffice.hrg_assign_col_profile'), lang('Backoffice.hrg_assign_col_status'), lang('Backoffice.hrg_assign_col_by'), lang('Backoffice.hrg_assign_col_date')], 'rows' => array_map(static fn ($r) => [
         trim((string) ($r['assignee_name'] ?? '')) ?: '—',
         $r['libelle_profil'] ?? '—',
-        filter_var($r['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN) ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
+        db_bool($r['is_active'] ?? false) ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
         trim((string) ($r['assigned_by_name'] ?? '')) ?: '—',
         $r['create_at'] ?? '—',
     ], $staff)],
@@ -63,7 +67,7 @@ $tables = [
         $r['numero_dossier'] ?? '—',
         trim(($r['prenom_personne'] ?? '') . ' ' . ($r['nom_personne'] ?? '')),
         $r['description_role_personne'] ?? '—',
-        filter_var($r['present'] ?? false, FILTER_VALIDATE_BOOLEAN) ? lang('Backoffice.yes') : lang('Backoffice.no'),
+        db_bool($r['present'] ?? false) ? lang('Backoffice.yes') : lang('Backoffice.no'),
         $r['observations'] ?? '—',
     ], $attendance)],
     ['id' => 'hrg-docs-table', 'title' => lang('Backoffice.hrg_section_documents'), 'headers' => [lang('Backoffice.hrg_col_case'), lang('Backoffice.hrg_field_doc_description'), lang('Backoffice.hrg_field_doc_party'), lang('Backoffice.hrg_field_doc_by'), lang('Backoffice.hrg_field_doc_date')], 'rows' => array_map(static function ($r) {
@@ -80,7 +84,7 @@ $tables = [
     ['id' => 'hrg-reports-table', 'title' => lang('Backoffice.hrg_section_reports'), 'headers' => [lang('Backoffice.hrg_col_case'), lang('Backoffice.hrg_field_report'), lang('Backoffice.hrg_field_report_validated'), lang('Backoffice.hrg_field_postpone_reason')], 'rows' => array_map(static fn ($r) => [
         $r['numero_dossier'] ?? '—',
         $r['rapport'] ?? ($record['rapport'] ?? '—'),
-        filter_var($r['rapport_valide'] ?? false, FILTER_VALIDATE_BOOLEAN) ? lang('Backoffice.yes') : lang('Backoffice.no'),
+        db_bool($r['rapport_valide'] ?? false) ? lang('Backoffice.yes') : lang('Backoffice.no'),
         $r['motif_report'] ?? '—',
     ], $complaints)],
     ['id' => 'hrg-history-table', 'title' => lang('Backoffice.hrg_section_history'), 'headers' => [lang('Backoffice.hrg_col_action'), lang('Backoffice.hrg_assign_col_by'), lang('Backoffice.hrg_assign_col_date')], 'rows' => array_map(static fn ($r) => [

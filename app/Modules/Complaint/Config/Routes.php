@@ -20,6 +20,10 @@ $routes->group('backoffice', ['namespace' => 'Modules\\Complaint\\Controllers'],
     $routes->post('complaint-stages/(:num)', 'ComplaintStages::update/$1');
     $routes->post('complaint-stages/(:num)/toggle-status', 'ComplaintStages::toggleStatus/$1');
     $routes->get('complaint-stages/(:num)/profiles', 'ComplaintStages::profiles/$1');
+    $routes->get('complaint-stages/(:num)/actions', 'ComplaintStages::actions/$1');
+    $routes->post('complaint-stages/(:num)/actions', 'ComplaintStages::storeAction/$1');
+    $routes->get('complaint-stages/(:num)/actions-json', 'ComplaintStages::actionsJson/$1');
+    $routes->post('complaint-stages/(:num)/actions/(:num)/toggle-status', 'ComplaintStages::toggleAction/$1/$2');
 
     // Stage configuration
     $routes->get('complaint-stage-configs', 'ComplaintStageConfigs::index');
@@ -28,6 +32,7 @@ $routes->group('backoffice', ['namespace' => 'Modules\\Complaint\\Controllers'],
     $routes->post('complaint-stage-configs/(:num)/toggle-status', 'ComplaintStageConfigs::toggleStatus/$1');
     $routes->get('complaint-stage-configs/profiles/(:num)', 'ComplaintStageConfigs::profiles/$1');
     $routes->get('api/complaint-stages', 'ComplaintStageConfigs::stages');
+    $routes->get('api/complaint-stage-actions', 'ComplaintStageConfigs::stageActions');
 
     // Statuses
     $routes->get('complaint-statuses', 'ComplaintStatuses::index');

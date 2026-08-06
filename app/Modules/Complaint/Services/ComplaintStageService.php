@@ -4,6 +4,7 @@ namespace Modules\Complaint\Services;
 
 use Modules\Administration\Models\AuditLogModel;
 use Modules\Administration\Models\ProfilModel;
+use Modules\Complaint\Models\EtapePlainteActionModel;
 use Modules\Complaint\Models\EtapePlainteModel;
 use Modules\Complaint\Models\EtapePlainteProfilModel;
 use Modules\CourtJurisdiction\Models\NiveauJuridictionModel;
@@ -12,6 +13,7 @@ class ComplaintStageService
 {
     private EtapePlainteModel $stages;
     private EtapePlainteProfilModel $stageProfiles;
+    private EtapePlainteActionModel $stageActions;
     private ProfilModel $profiles;
     private NiveauJuridictionModel $levels;
     private AuditLogModel $audit;
@@ -19,12 +21,14 @@ class ComplaintStageService
     public function __construct(
         ?EtapePlainteModel $stages = null,
         ?EtapePlainteProfilModel $stageProfiles = null,
+        ?EtapePlainteActionModel $stageActions = null,
         ?ProfilModel $profiles = null,
         ?NiveauJuridictionModel $levels = null,
         ?AuditLogModel $audit = null
     ) {
         $this->stages        = $stages ?? new EtapePlainteModel();
         $this->stageProfiles = $stageProfiles ?? new EtapePlainteProfilModel();
+        $this->stageActions  = $stageActions ?? new EtapePlainteActionModel();
         $this->profiles      = $profiles ?? new ProfilModel();
         $this->levels        = $levels ?? new NiveauJuridictionModel();
         $this->audit         = $audit ?? new AuditLogModel();
@@ -44,7 +48,7 @@ class ComplaintStageService
         }
 
         return array_map(static function (array $row): array {
-            $active = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $active = db_bool($row['is_active'] ?? false);
 
             return [
                 'id'              => (int) $row['etape_plainte_id'],
@@ -52,6 +56,7 @@ class ComplaintStageService
                 'level'           => $row['desc_niveau_juridiction'] ?? '—',
                 'niveau_id'       => (int) ($row['niveau_juridiction_id'] ?? 0),
                 'profiles_count'  => (int) ($row['profiles_count'] ?? 0),
+                'actions_count'   => (int) ($row['actions_count'] ?? 0),
                 'is_convocation'  => filter_var($row['is_convocation'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'is_audience'     => filter_var($row['is_audience'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'is_active'       => $active,
@@ -87,7 +92,7 @@ class ComplaintStageService
         }
 
         return array_map(static function (array $row): array {
-            $active = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $active = db_bool($row['is_active'] ?? false);
 
             return [
                 'code'        => $row['code_profil'] ?? '',
@@ -97,6 +102,99 @@ class ComplaintStageService
                 'status'      => $active ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
             ];
         }, $rows);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function actions(int $etapeId): array
+    {
+        try {
+            $rows = $this->stageActions->listForEtape($etapeId);
+        } catch (\Throwable $e) {
+            log_message('error', 'Failed to list stage actions: {message}', ['message' => $e->getMessage()]);
+
+            return [];
+        }
+
+        return array_map(static function (array $row): array {
+            $active = db_bool($row['is_active'] ?? false);
+
+            return [
+                'id'          => (int) $row['etape_plainte_action_id'],
+                'description' => $row['desc_etape_plainte_action'] ?? '',
+                'is_active'   => $active,
+                'status'      => $active ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
+            ];
+        }, $rows);
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     * @return array{ok:bool,errors?:list<string>,id?:int}
+     */
+    public function createAction(int $etapeId, array $input): array
+    {
+        if (! $this->stages->find($etapeId)) {
+            return ['ok' => false, 'errors' => [lang('Backoffice.cs_err_not_found')]];
+        }
+
+        $description = trim((string) ($input['desc_etape_plainte_action'] ?? ''));
+        if ($description === '') {
+            return ['ok' => false, 'errors' => [lang('Backoffice.cs_action_err_description')]];
+        }
+
+        try {
+            $id = $this->stageActions->insert([
+                'etape_plainte_id'          => $etapeId,
+                'desc_etape_plainte_action' => $description,
+                'is_active'                 => true,
+            ], true);
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'errors' => [lang('Backoffice.cs_action_err_save')]];
+        }
+
+        if (! $id) {
+            return ['ok' => false, 'errors' => [lang('Backoffice.cs_action_err_save')]];
+        }
+
+        $this->audit->record('CREATE', 'plainte.etape_plainte_action', (int) $id, null, [
+            'etape_plainte_id'          => $etapeId,
+            'desc_etape_plainte_action' => $description,
+        ], $this->actorId());
+
+        return ['ok' => true, 'id' => (int) $id];
+    }
+
+    /**
+     * @return array{ok:bool,errors?:list<string>,activated?:bool}
+     */
+    public function toggleAction(int $etapeId, int $actionId): array
+    {
+        $row = $this->stageActions->find($actionId);
+        if (! $row || (int) ($row['etape_plainte_id'] ?? 0) !== $etapeId) {
+            return ['ok' => false, 'errors' => [lang('Backoffice.cs_action_err_not_found')]];
+        }
+
+        $isActive   = db_bool($row['is_active'] ?? false);
+        $activating = ! $isActive;
+
+        try {
+            $this->stageActions->update($actionId, ['is_active' => $activating]);
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'errors' => [lang('Backoffice.cs_action_err_save')]];
+        }
+
+        $this->audit->record(
+            $activating ? 'ACTIVATE' : 'DEACTIVATE',
+            'plainte.etape_plainte_action',
+            $actionId,
+            ['is_active' => $isActive],
+            ['is_active' => $activating],
+            $this->actorId()
+        );
+
+        return ['ok' => true, 'activated' => $activating];
     }
 
     /**
@@ -150,7 +248,7 @@ class ComplaintStageService
             return ['ok' => false, 'errors' => [lang('Backoffice.cs_err_not_found')]];
         }
 
-        $errors = $this->validate($input);
+        $errors = $this->validate($input, $id);
         if ($errors) {
             return ['ok' => false, 'errors' => $errors];
         }
@@ -191,7 +289,7 @@ class ComplaintStageService
             return ['ok' => false, 'errors' => [lang('Backoffice.cs_err_not_found')]];
         }
 
-        $isActive   = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $isActive   = db_bool($row['is_active'] ?? false);
         $activating = ! $isActive;
 
         try {
@@ -216,7 +314,7 @@ class ComplaintStageService
      * @param array<string, mixed> $input
      * @return list<string>
      */
-    private function validate(array $input): array
+    private function validate(array $input, ?int $etapeId = null): array
     {
         $errors = [];
         if (trim((string) ($input['description_etape_plainte'] ?? '')) === '') {
@@ -232,11 +330,17 @@ class ComplaintStageService
         if ($profilIds === []) {
             $errors[] = lang('Backoffice.cs_err_profiles');
         } else {
+            $alreadyAssigned = $etapeId ? $this->stages->profileIds($etapeId) : [];
             foreach ($profilIds as $profilId) {
-                if (! $this->profiles->find($profilId)) {
-                    $errors[] = lang('Backoffice.cs_err_profile_invalid');
-                    break;
+                if ($this->profiles->isActiveProfile($profilId)) {
+                    continue;
                 }
+                // Keep previously assigned profiles selectable on edit even if deactivated later.
+                if (in_array($profilId, $alreadyAssigned, true) && $this->profiles->find($profilId)) {
+                    continue;
+                }
+                $errors[] = lang('Backoffice.cs_err_profile_invalid');
+                break;
             }
         }
 

@@ -252,7 +252,7 @@ class BackofficeHearingService
         }
 
         return array_map(static function (array $row): array {
-            $active = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $active = db_bool($row['is_active'] ?? false);
 
             return [
                 'id'            => (int) $row['audience_affection_id'],
@@ -281,7 +281,7 @@ class BackofficeHearingService
 
         $userId    = (int) ($input['utilisateur_affecte_id'] ?? 0);
         $profilId  = (int) ($input['profil_id'] ?? 0);
-        $isActive  = filter_var($input['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN);
+        $isActive  = db_bool($input['is_active'] ?? true);
 
         if ($userId < 1 || $profilId < 1) {
             return ['ok' => false, 'errors' => [lang('Backoffice.hrg_err_assignment_required')]];
@@ -334,8 +334,8 @@ class BackofficeHearingService
         $userId   = (int) ($input['utilisateur_affecte_id'] ?? $existing['utilisateur_affecte_id']);
         $profilId = (int) ($input['profil_id'] ?? $existing['profil_id']);
         $isActive = array_key_exists('is_active', $input)
-            ? filter_var($input['is_active'], FILTER_VALIDATE_BOOLEAN)
-            : filter_var($existing['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            ? db_bool($input['is_active'])
+            : db_bool($existing['is_active'] ?? false);
 
         $hearing = $this->find($audienceId);
         $courtId = (int) ($hearing['juridiction_audience_id'] ?? 0);
@@ -374,7 +374,7 @@ class BackofficeHearingService
             return ['ok' => false, 'errors' => [lang('Backoffice.hrg_err_assignment_not_found')]];
         }
 
-        $isActive   = filter_var($existing['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $isActive   = db_bool($existing['is_active'] ?? false);
         $activating = ! $isActive;
 
         try {
@@ -452,7 +452,7 @@ class BackofficeHearingService
             'heure_debut'        => $held ? (string) $input['heure_debut'] : null,
             'heure_fin'          => $held ? (string) $input['heure_fin'] : null,
             'rapport'            => $held ? trim((string) $input['rapport']) : null,
-            'rapport_valide'     => $held ? filter_var($input['rapport_valide'] ?? false, FILTER_VALIDATE_BOOLEAN) : null,
+            'rapport_valide'     => $held ? db_bool($input['rapport_valide'] ?? false) : null,
         ];
 
         if (! $held && ! empty($input['new_hearing_date'])) {
@@ -481,7 +481,7 @@ class BackofficeHearingService
                     'statut_audience_id' => $statusId,
                     'motif_report'       => ! $heard ? trim((string) ($row['observations'] ?? ($input['motif_report'] ?? ''))) ?: null : null,
                     'rapport'            => $heard ? trim((string) ($row['rapport'] ?? ($input['rapport'] ?? ''))) ?: null : null,
-                    'rapport_valide'     => $heard ? filter_var($row['rapport_valide'] ?? false, FILTER_VALIDATE_BOOLEAN) : null,
+                    'rapport_valide'     => $heard ? db_bool($row['rapport_valide'] ?? false) : null,
                 ];
                 $this->hearingComplaints->update($apId, $apUpdate);
 
@@ -495,7 +495,7 @@ class BackofficeHearingService
                             'audience_plainte_id'      => $apId,
                             'plainte_role_personne_id' => $roleId,
                             'personne_id'              => (int) ($party['personne_id'] ?? 0) ?: null,
-                            'present'                  => filter_var($pres['present'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                            'present'                  => db_bool($pres['present'] ?? false),
                             'observations'             => trim((string) ($pres['observations'] ?? '')) ?: null,
                             'utilisateur_id'           => $this->actorId(),
                             'created_at'               => date('Y-m-d H:i:s'),
@@ -554,7 +554,7 @@ class BackofficeHearingService
         $hasClerk = false;
 
         foreach ($this->safe(fn () => $this->assignments->listByAudience($audienceId)) as $row) {
-            if (! filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            if (! db_bool($row['is_active'] ?? false)) {
                 continue;
             }
             $hay = mb_strtolower(($row['code_profil'] ?? '') . ' ' . ($row['libelle_profil'] ?? ''));

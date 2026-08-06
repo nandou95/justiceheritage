@@ -8,9 +8,11 @@
         <h1><?= esc(lang('Backoffice.vrd_title')) ?></h1>
         <p><?= esc(lang('Backoffice.vrd_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/verdicts/create')): ?>
     <a class="btn btn-bo-primary" href="<?= site_url('backoffice/verdicts/create') ?>">
         <i class="bi bi-plus-lg"></i> <?= esc(lang('Backoffice.vrd_new')) ?>
     </a>
+    <?php endif; ?>
 </section>
 
 <section class="bo-panel bo-crud-panel">
@@ -76,9 +78,6 @@
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-12 col-md-6 col-xl-1 d-flex align-items-end">
-                <button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button>
-            </div>
         </div>
     </form>
 
@@ -110,7 +109,9 @@
                     <td><?= esc($row['verdict_date']) ?></td>
                     <td>
                         <div class="bo-action-group">
+                            <?php if (can_access('backoffice/verdicts/show')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/verdicts/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.vrd_action_view'), 'attr') ?>"><i class="bi bi-card-heading"></i></a>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>

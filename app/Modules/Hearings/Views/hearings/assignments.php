@@ -13,9 +13,11 @@
     </div>
     <div class="bo-crud-head-actions">
         <a class="btn btn-bo-secondary" href="<?= site_url('backoffice/hearings') ?>"><i class="bi bi-arrow-left"></i> <?= esc(lang('Backoffice.hrg_back_list')) ?></a>
+        <?php if (can_access('backoffice/hearings/assign')): ?>
         <button class="btn btn-bo-primary" type="button" data-bs-toggle="modal" data-bs-target="#hrgAssignModal" data-bo-hrg-assign-create>
             <i class="bi bi-plus-lg"></i> <?= esc(lang('Backoffice.hrg_assign_new')) ?>
         </button>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -47,6 +49,7 @@
                     <td><?= esc($row['assigned_at']) ?></td>
                     <td>
                         <div class="bo-action-group">
+                            <?php if (can_access('backoffice/hearings/assign')): ?>
                             <button class="btn btn-bo-icon" type="button" data-bo-hrg-assign-edit
                                 data-id="<?= esc($row['id']) ?>"
                                 data-user="<?= esc($row['user_id']) ?>"
@@ -55,6 +58,8 @@
                                 data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.hrg_assign_action_edit'), 'attr') ?>">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
+                            <?php endif; ?>
+                            <?php if (can_access('backoffice/hearings/assignments/toggle-status')): ?>
                             <button class="btn btn-bo-icon <?= $row['is_active'] ? 'is-danger' : 'is-success' ?>" type="button"
                                 data-bo-toggle-hrg-assign
                                 data-id="<?= esc($row['id']) ?>"
@@ -64,6 +69,7 @@
                                 title="<?= esc($row['is_active'] ? lang('Backoffice.hrg_assign_action_deactivate') : lang('Backoffice.hrg_assign_action_activate'), 'attr') ?>">
                                 <i class="bi <?= $row['is_active'] ? 'bi-toggle-off' : 'bi-toggle-on' ?>"></i>
                             </button>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>

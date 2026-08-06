@@ -286,6 +286,51 @@ a:hover {
   box-shadow: 0 8px 20px rgba(10, 50, 39, 0.22);
 }
 
+.btn-jh-bo-login {
+  --bs-btn-color: #3d4a3f;
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: rgba(61, 74, 63, 0.35);
+  --bs-btn-hover-color: #0a3227;
+  --bs-btn-hover-bg: rgba(10, 50, 39, 0.06);
+  --bs-btn-hover-border-color: rgba(10, 50, 39, 0.45);
+  --bs-btn-focus-shadow-rgb: 10, 50, 39;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 0.42rem 0.8rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(61, 74, 63, 0.35);
+  color: #3d4a3f;
+  background: transparent;
+  text-decoration: none;
+}
+
+.btn-jh-bo-login:hover,
+.btn-jh-bo-login:focus {
+  color: #0a3227;
+  background: rgba(10, 50, 39, 0.06);
+  border-color: rgba(10, 50, 39, 0.45);
+}
+
+.jh-bo-login-ico {
+  display: inline-flex;
+  line-height: 0;
+  opacity: 0.9;
+}
+
+.jh-auth-welcome-bo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.jh-bo-shield {
+  display: inline-flex;
+  color: var(--jh-forest);
+}
+
 .btn-jh-secondary {
   --bs-btn-color: var(--jh-forest);
   --bs-btn-bg: transparent;

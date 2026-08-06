@@ -12,6 +12,16 @@ return [
     'label_password'             => 'Password',
     'cta_login'                  => 'Sign in to your portal',
 
+    'subject_bo_user_registration' => 'Welcome to JusticeHeritage — Back Office account',
+    'bo_user_registration_body'    => 'Welcome to JusticeHeritage. Your Back Office user account has been created successfully. Use the login identifier and temporary password below to access the Back Office.',
+    'bo_user_registration_footer'  => 'For your security, change your password after the first login. If you did not expect this account, contact the system administrator immediately.',
+    'label_login_identifier'       => 'Login identifier',
+    'label_login_cni'              => 'National ID (CNI)',
+    'label_login_matricule'        => 'Employee number',
+    'label_login_email'            => 'Email address',
+    'label_temp_password'          => 'Temporary password',
+    'cta_bo_login'                 => 'Open Back Office',
+
     'subject_verification'       => 'Verify your JusticeHeritage email',
     'verification_body'          => 'Please confirm your email address to activate your account notifications.',
     'cta_verify'                 => 'Verify email address',
@@ -48,6 +58,11 @@ return [
 
     'subject_verdict_issued'     => 'Verdict issued for case {0}',
     'verdict_issued_body'        => 'A verdict has been issued for case {0} on {1}. Appeal deadline: {2}.',
+
+    'subject_transfer_created'   => 'Case file transfer created — {0}',
+    'transfer_created_body'      => 'Case {0} has been transferred from {1} to {2} on {3}. Reception is pending.',
+    'subject_transfer_received'  => 'Case file transfer received — {0}',
+    'transfer_received_body'     => 'Case {0} transferred from {1} to {2} was received on {3} and is available for processing.',
 
     'test_subject'               => 'JusticeHeritage SMTP test',
     'test_body'                  => 'This is a test email confirming that SMTP notifications are configured correctly.',

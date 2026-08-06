@@ -8,9 +8,11 @@
         <h1><?= esc(lang('Backoffice.hrg_st_title')) ?></h1>
         <p><?= esc(lang('Backoffice.hrg_st_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/hearing-statuses/create')): ?>
     <button class="btn btn-bo-primary" type="button" data-bs-toggle="modal" data-bs-target="#hrgStFormModal" data-bo-hrg-st-create>
         <i class="bi bi-plus-lg"></i> <?= esc(lang('Backoffice.hrg_st_new')) ?>
     </button>
+    <?php endif; ?>
 </section>
 
 <section class="bo-panel bo-crud-panel">
@@ -33,12 +35,14 @@
                     <td><?= esc($row['description']) ?></td>
                     <td>
                         <div class="bo-action-group">
+                            <?php if (can_access('backoffice/hearing-statuses/edit')): ?>
                             <button class="btn btn-bo-icon" type="button" data-bo-hrg-st-edit
                                 data-id="<?= esc($row['id']) ?>"
                                 data-description="<?= esc($row['description'], 'attr') ?>"
                                 data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.hrg_st_action_edit'), 'attr') ?>">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>

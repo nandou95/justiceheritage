@@ -4,6 +4,7 @@ namespace Modules\Complaint\Services;
 
 use Modules\Administration\Models\AuditLogModel;
 use Modules\Complaint\Models\ConfigurationEtapePlainteModel;
+use Modules\Complaint\Models\EtapePlainteActionModel;
 use Modules\Complaint\Models\EtapePlainteModel;
 use Modules\CourtJurisdiction\Models\NiveauJuridictionModel;
 
@@ -11,17 +12,20 @@ class ComplaintStageConfigService
 {
     private ConfigurationEtapePlainteModel $configs;
     private EtapePlainteModel $stages;
+    private EtapePlainteActionModel $actions;
     private NiveauJuridictionModel $levels;
     private AuditLogModel $audit;
 
     public function __construct(
         ?ConfigurationEtapePlainteModel $configs = null,
         ?EtapePlainteModel $stages = null,
+        ?EtapePlainteActionModel $actions = null,
         ?NiveauJuridictionModel $levels = null,
         ?AuditLogModel $audit = null
     ) {
         $this->configs = $configs ?? new ConfigurationEtapePlainteModel();
         $this->stages  = $stages ?? new EtapePlainteModel();
+        $this->actions = $actions ?? new EtapePlainteActionModel();
         $this->levels  = $levels ?? new NiveauJuridictionModel();
         $this->audit   = $audit ?? new AuditLogModel();
     }
@@ -40,23 +44,23 @@ class ComplaintStageConfigService
         }
 
         return array_map(static function (array $row): array {
-            $active = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $active = db_bool($row['is_active'] ?? false);
 
             return [
-                'id'                     => (int) $row['configuration_etape_plainte_id'],
-                'etape_actuel_id'        => (int) $row['etape_plainte_actuel_id'],
-                'etape_suivant_id'       => (int) $row['etape_plainte_suivant_id'],
-                'etape_actuel'           => $row['etape_actuel'] ?? '',
-                'etape_suivant'          => $row['etape_suivant'] ?? '',
-                'niveau_actuel_id'       => (int) ($row['niveau_actuel_id'] ?? 0),
-                'niveau_suivant_id'      => (int) ($row['niveau_suivant_id'] ?? 0),
-                'niveau_actuel'          => $row['niveau_actuel'] ?? '—',
-                'niveau_suivant'         => $row['niveau_suivant'] ?? '—',
-                'profiles_actuel_count'  => (int) ($row['profiles_actuel_count'] ?? 0),
-                'profiles_suivant_count' => (int) ($row['profiles_suivant_count'] ?? 0),
-                'url_route'              => $row['url_route'] ?? '',
-                'is_active'              => $active,
-                'status'                 => $active ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
+                'id'                => (int) $row['configuration_etape_plainte_id'],
+                'etape_actuel_id'   => (int) $row['etape_plainte_actuel_id'],
+                'etape_suivant_id'  => (int) $row['etape_plainte_suivant_id'],
+                'action_id'         => (int) ($row['etape_plainte_action_id'] ?? 0),
+                'etape_actuel'      => $row['etape_actuel'] ?? '',
+                'etape_suivant'     => $row['etape_suivant'] ?? '',
+                'action_actuel'     => $row['action_actuel'] ?? '—',
+                'niveau_actuel_id'  => (int) ($row['niveau_actuel_id'] ?? 0),
+                'niveau_suivant_id' => (int) ($row['niveau_suivant_id'] ?? 0),
+                'niveau_actuel'     => $row['niveau_actuel'] ?? '—',
+                'niveau_suivant'    => $row['niveau_suivant'] ?? '—',
+                'url_route'         => $row['url_route'] ?? '',
+                'is_active'         => $active,
+                'status'            => $active ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
             ];
         }, $rows);
     }
@@ -77,6 +81,8 @@ class ComplaintStageConfigService
         try {
             $id = $this->configs->insert($data, true);
         } catch (\Throwable $e) {
+            log_message('error', 'Failed to create stage config: {message}', ['message' => $e->getMessage()]);
+
             return ['ok' => false, 'errors' => [lang('Backoffice.csc_err_save')]];
         }
 
@@ -128,7 +134,7 @@ class ComplaintStageConfigService
             return ['ok' => false, 'errors' => [lang('Backoffice.csc_err_not_found')]];
         }
 
-        $isActive   = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $isActive   = db_bool($row['is_active'] ?? false);
         $activating = ! $isActive;
 
         try {
@@ -161,6 +167,7 @@ class ComplaintStageConfigService
         $niveauSuivant = (int) ($input['niveau_juridiction_suivant_id'] ?? 0);
         $actuelId      = (int) ($input['etape_plainte_actuel_id'] ?? 0);
         $suivantId     = (int) ($input['etape_plainte_suivant_id'] ?? 0);
+        $actionId      = (int) ($input['etape_plainte_action_id'] ?? 0);
         $urlRoute      = trim((string) ($input['url_route'] ?? ''));
 
         if ($niveauActuel < 1 || ! $this->levels->find($niveauActuel)) {
@@ -185,11 +192,22 @@ class ComplaintStageConfigService
             $errors[] = lang('Backoffice.csc_err_stage_level_next');
         }
 
+        if ($actionId < 1) {
+            $errors[] = lang('Backoffice.csc_err_action');
+        } elseif ($actuelId > 0 && ! $this->actions->belongsToEtape($actionId, $actuelId)) {
+            $errors[] = lang('Backoffice.csc_err_action_stage');
+        }
+
         if ($actuelId > 0 && $suivantId > 0 && $actuelId === $suivantId) {
             $errors[] = lang('Backoffice.csc_err_self');
         }
 
-        if ($actuelId > 0 && $suivantId > 0 && $this->configs->pairExists($actuelId, $suivantId, $ignoreId)) {
+        if (
+            $actuelId > 0
+            && $actionId > 0
+            && $suivantId > 0
+            && $this->configs->transitionExists($actuelId, $actionId, $suivantId, $ignoreId)
+        ) {
             $errors[] = lang('Backoffice.csc_err_duplicate');
         }
 
@@ -197,7 +215,6 @@ class ComplaintStageConfigService
             $errors[] = lang('Backoffice.csc_err_route');
         }
 
-        // Workflow rule: next level must be same or next higher appeal level (id >= current is common for sequential hierarchy)
         if ($niveauActuel > 0 && $niveauSuivant > 0 && $niveauSuivant < $niveauActuel) {
             $errors[] = lang('Backoffice.csc_err_workflow');
         }
@@ -214,6 +231,7 @@ class ComplaintStageConfigService
         return [
             'etape_plainte_actuel_id'  => (int) ($input['etape_plainte_actuel_id'] ?? 0),
             'etape_plainte_suivant_id' => (int) ($input['etape_plainte_suivant_id'] ?? 0),
+            'etape_plainte_action_id'  => (int) ($input['etape_plainte_action_id'] ?? 0),
             'url_route'                => trim((string) ($input['url_route'] ?? '')),
         ];
     }

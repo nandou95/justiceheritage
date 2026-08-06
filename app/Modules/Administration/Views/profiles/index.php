@@ -10,10 +10,12 @@
         <h1><?= esc(lang('Backoffice.profiles_title')) ?></h1>
         <p><?= esc(lang('Backoffice.profiles_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/profiles/create')): ?>
     <a class="btn btn-bo-primary" href="<?= site_url('backoffice/profiles/create') ?>">
         <i class="bi bi-plus-lg" aria-hidden="true"></i>
         <?= esc(lang('Backoffice.profiles_new')) ?>
     </a>
+    <?php endif; ?>
 </section>
 
 <section class="bo-panel bo-crud-panel">
@@ -26,9 +28,6 @@
                     <option value="true" <?= ($status ?? '') === 'true' || ($status ?? '') === '1' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_active')) ?></option>
                     <option value="false" <?= ($status ?? '') === 'false' || ($status ?? '') === '0' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_inactive')) ?></option>
                 </select>
-            </div>
-            <div class="col-12 col-md-3 col-xl-2">
-                <button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button>
             </div>
         </div>
     </form>
@@ -66,10 +65,13 @@
                         </td>
                         <td>
                             <div class="bo-action-group">
+                                <?php if (can_access('backoffice/profiles/edit')): ?>
                                 <a class="btn btn-bo-icon" href="<?= site_url('backoffice/profiles/' . $row['id'] . '/edit') ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.profiles_action_edit'), 'attr') ?>">
                                     <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                     <span class="visually-hidden"><?= esc(lang('Backoffice.profiles_action_edit')) ?></span>
                                 </a>
+                                <?php endif; ?>
+                                <?php if (can_access('backoffice/profiles/toggle-status')): ?>
                                 <button
                                     class="btn btn-bo-icon <?= $row['is_active'] ? 'is-danger' : 'is-success' ?>"
                                     type="button"
@@ -83,10 +85,13 @@
                                     <i class="bi <?= $row['is_active'] ? 'bi-toggle-off' : 'bi-toggle-on' ?>" aria-hidden="true"></i>
                                     <span class="visually-hidden"><?= esc($row['is_active'] ? lang('Backoffice.profiles_action_deactivate') : lang('Backoffice.profiles_action_activate')) ?></span>
                                 </button>
+                                <?php endif; ?>
+                                <?php if (can_access('backoffice/profiles/show')): ?>
                                 <a class="btn btn-bo-icon" href="<?= site_url('backoffice/profiles/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.profiles_action_view'), 'attr') ?>">
                                     <i class="bi bi-eye" aria-hidden="true"></i>
                                     <span class="visually-hidden"><?= esc(lang('Backoffice.profiles_action_view')) ?></span>
                                 </a>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>

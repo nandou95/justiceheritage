@@ -8,9 +8,11 @@
         <h1><?= esc(lang('Backoffice.cs_title')) ?></h1>
         <p><?= esc(lang('Backoffice.cs_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/complaint-stages/create')): ?>
     <a class="btn btn-bo-primary" href="<?= site_url('backoffice/complaint-stages/create') ?>">
         <i class="bi bi-plus-lg"></i> <?= esc(lang('Backoffice.cs_new')) ?>
     </a>
+    <?php endif; ?>
 </section>
 
 <section class="bo-panel bo-crud-panel">
@@ -24,7 +26,6 @@
                     <option value="false" <?= ($status ?? '') === 'false' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_inactive')) ?></option>
                 </select>
             </div>
-            <div class="col-md-2"><button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button></div>
         </div>
     </form>
 
@@ -40,6 +41,7 @@
                 <tr>
                     <th><?= esc(lang('Backoffice.cs_col_description')) ?></th>
                     <th><?= esc(lang('Backoffice.cs_col_profiles')) ?></th>
+                    <th><?= esc(lang('Backoffice.cs_col_actions_count')) ?></th>
                     <th><?= esc(lang('Backoffice.cs_col_level')) ?></th>
                     <th><?= esc(lang('Backoffice.cs_col_status')) ?></th>
                     <th data-orderable="false" data-searchable="false"><?= esc(lang('Backoffice.col_actions')) ?></th>
@@ -54,14 +56,28 @@
                             <?= (int) $row['profiles_count'] ?>
                         </button>
                     </td>
+                    <td>
+                        <button type="button" class="btn btn-link p-0 bo-count-link" data-bo-cs-actions data-id="<?= (int) $row['id'] ?>" data-name="<?= esc($row['description'], 'attr') ?>">
+                            <?= (int) $row['actions_count'] ?>
+                        </button>
+                    </td>
                     <td><?= esc($row['level']) ?></td>
                     <td><span class="bo-status-pill <?= $row['is_active'] ? 'is-active' : 'is-inactive' ?>"><?= esc($row['status']) ?></span></td>
                     <td>
                         <div class="bo-action-group">
+                            <?php if (can_access('backoffice/complaint-stages/edit')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/complaint-stages/' . $row['id'] . '/edit') ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.cs_action_edit'), 'attr') ?>"><i class="bi bi-pencil-square"></i></a>
+                            <?php endif; ?>
+                            <?php if (can_access('backoffice/complaint-stages/assign') || can_access('backoffice/complaint-stages/edit')): ?>
+                            <a class="btn btn-bo-icon" href="<?= site_url('backoffice/complaint-stages/' . $row['id'] . '/actions') ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.cs_actions_manage'), 'attr') ?>">
+                                <i class="bi bi-list-check"></i>
+                            </a>
+                            <?php endif; ?>
+                            <?php if (can_access('backoffice/complaint-stages/toggle-status')): ?>
                             <button class="btn btn-bo-icon <?= $row['is_active'] ? 'is-danger' : 'is-success' ?>" type="button" data-bo-toggle-cs data-id="<?= (int) $row['id'] ?>" data-name="<?= esc($row['description'], 'attr') ?>" data-activate="<?= $row['is_active'] ? '0' : '1' ?>" data-bs-toggle="tooltip" title="<?= esc($row['is_active'] ? lang('Backoffice.cs_action_deactivate') : lang('Backoffice.cs_action_activate'), 'attr') ?>">
                                 <i class="bi <?= $row['is_active'] ? 'bi-toggle-off' : 'bi-toggle-on' ?>"></i>
                             </button>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>
@@ -109,6 +125,35 @@
     </div></div>
 </div>
 
+<div class="modal fade" id="csActionsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title fs-5" id="csActionsModalTitle"><?= esc(lang('Backoffice.cs_actions_title')) ?></h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="bo-table-toolbar mb-2">
+                <label class="bo-table-search"><i class="bi bi-search"></i>
+                    <input type="search" class="form-control" id="cs-actions-modal-search" placeholder="<?= esc(lang('Backoffice.search_placeholder'), 'attr') ?>">
+                </label>
+            </div>
+            <div class="table-responsive bo-table-wrap">
+                <table class="table table-sm table-hover bo-table jh-datatable w-100" id="csActionsModalTable" data-page-length="5" data-dom="lrtip">
+                    <thead>
+                        <tr>
+                            <th><?= esc(lang('Backoffice.cs_action_col_description')) ?></th>
+                            <th><?= esc(lang('Backoffice.cs_col_status')) ?></th>
+                            <th data-orderable="false" data-searchable="false"><?= esc(lang('Backoffice.col_actions')) ?></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <p class="text-muted mb-0 d-none" id="csActionsEmpty"><?= esc(lang('Backoffice.cs_actions_empty')) ?></p>
+        </div>
+    </div></div>
+</div>
+
 <script>
 window.JH_CS_I18N = {
     activateTitle: <?= json_encode(lang('Backoffice.cs_activate_title')) ?>,
@@ -119,7 +164,14 @@ window.JH_CS_I18N = {
     deactivateBtn: <?= json_encode(lang('Backoffice.cs_deactivate_btn')) ?>,
     toggleUrl: <?= json_encode(site_url('backoffice/complaint-stages/__ID__/toggle-status')) ?>,
     profilesUrl: <?= json_encode(site_url('backoffice/complaint-stages/__ID__/profiles')) ?>,
-    profilesTitle: <?= json_encode(lang('Backoffice.cs_profiles_title')) ?>
+    profilesTitle: <?= json_encode(lang('Backoffice.cs_profiles_title')) ?>,
+    actionsUrl: <?= json_encode(site_url('backoffice/complaint-stages/__ID__/actions-json')) ?>,
+    actionsTitle: <?= json_encode(lang('Backoffice.cs_actions_title')) ?>,
+    actionToggleUrl: <?= json_encode(site_url('backoffice/complaint-stages/__ETAPE__/actions/__ID__/toggle-status')) ?>,
+    actionActivate: <?= json_encode(lang('Backoffice.cs_sa_activate')) ?>,
+    actionDeactivate: <?= json_encode(lang('Backoffice.cs_sa_deactivate')) ?>,
+    csrfName: <?= json_encode(csrf_token()) ?>,
+    csrfHash: <?= json_encode(csrf_hash()) ?>
 };
 </script>
 <?= $this->endSection() ?>

@@ -47,8 +47,10 @@ class Email extends BaseConfig
 
     /**
      * SMTP Port
+     *
+     * Prefer 587 (STARTTLS). Port 465 (implicit TLS) is often blocked by ISPs.
      */
-    public int $SMTPPort = 465;
+    public int $SMTPPort = 587;
 
     /**
      * SMTP Timeout (in seconds)
@@ -64,10 +66,9 @@ class Email extends BaseConfig
      * SMTP Encryption.
      *
      * @var string '', 'tls' or 'ssl'. 'tls' will issue a STARTTLS command
-     *             to the server. 'ssl' means implicit SSL. Connection on port
-     *             465 should set this to ''.
+     *             to the server. 'ssl' means implicit SSL (typically port 465).
      */
-    public string $SMTPCrypto = 'ssl';
+    public string $SMTPCrypto = 'tls';
 
     /**
      * Enable word-wrap

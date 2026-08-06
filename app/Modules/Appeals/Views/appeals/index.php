@@ -8,9 +8,11 @@
         <h1><?= esc(lang('Backoffice.apl_title')) ?></h1>
         <p><?= esc(lang('Backoffice.apl_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/appeals/create')): ?>
     <a class="btn btn-bo-primary" href="<?= site_url('backoffice/appeals/create') ?>">
         <i class="bi bi-plus-lg"></i> <?= esc(lang('Backoffice.apl_new')) ?>
     </a>
+    <?php endif; ?>
 </section>
 
 <section class="bo-panel bo-crud-panel">
@@ -66,9 +68,6 @@
                     <option value="false" <?= ($filters['dans_les_delais'] ?? '') === 'false' ? 'selected' : '' ?>><?= esc(lang('Backoffice.no')) ?></option>
                 </select>
             </div>
-            <div class="col-12 col-md-6 col-xl-1 d-flex align-items-end">
-                <button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button>
-            </div>
         </div>
     </form>
 
@@ -102,7 +101,9 @@
                     <td><?= esc($row['appeal_date']) ?></td>
                     <td>
                         <div class="bo-action-group">
+                            <?php if (can_access('backoffice/appeals/show')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/appeals/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.apl_action_view'), 'attr') ?>"><i class="bi bi-card-heading"></i></a>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>

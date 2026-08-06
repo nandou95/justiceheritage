@@ -60,13 +60,15 @@ class ComplaintStages extends \App\Controllers\BaseController
             return redirect()->to(site_url('backoffice/complaint-stages'))->with('error', lang('Backoffice.cs_err_not_found'));
         }
 
+        $assignedIds = array_map('intval', (array) ($record['profil_ids'] ?? []));
+
         return view('Modules\Complaint\Views\stages\form', [
             'title'    => lang('Backoffice.cs_edit_title'),
             'active'   => 'complaint-stages',
             'mode'     => 'edit',
             'record'   => $record,
             'levels'   => (new NiveauJuridictionModel())->options(),
-            'profiles' => (new ProfilModel())->options(),
+            'profiles' => (new ProfilModel())->options($assignedIds),
             'user'     => $this->sampleUser(),
         ]);
     }
@@ -100,6 +102,60 @@ class ComplaintStages extends \App\Controllers\BaseController
             'ok'       => true,
             'profiles' => $this->service->profiles($id),
         ]);
+    }
+
+    public function actionsJson(int $id): ResponseInterface
+    {
+        return $this->response->setJSON([
+            'ok'      => true,
+            'actions' => $this->service->actions($id),
+        ]);
+    }
+
+    public function actions(int $id)
+    {
+        $record = $this->service->find($id);
+        if (! $record) {
+            return redirect()->to(site_url('backoffice/complaint-stages'))->with('error', lang('Backoffice.cs_err_not_found'));
+        }
+
+        return view('Modules\Complaint\Views\stages\actions', [
+            'title'   => lang('Backoffice.cs_actions_manage_title'),
+            'active'  => 'complaint-stages',
+            'record'  => $record,
+            'actions' => $this->service->actions($id),
+            'user'    => $this->sampleUser(),
+        ]);
+    }
+
+    public function storeAction(int $id)
+    {
+        $result = $this->service->createAction($id, $this->request->getPost());
+        if (! ($result['ok'] ?? false)) {
+            return redirect()
+                ->to(site_url('backoffice/complaint-stages/' . $id . '/actions'))
+                ->withInput()
+                ->with('errors', $result['errors'] ?? [lang('Backoffice.cs_action_err_save')]);
+        }
+
+        return redirect()
+            ->to(site_url('backoffice/complaint-stages/' . $id . '/actions'))
+            ->with('success', lang('Backoffice.cs_action_created'));
+    }
+
+    public function toggleAction(int $id, int $actionId)
+    {
+        $result = $this->service->toggleAction($id, $actionId);
+        if (! ($result['ok'] ?? false)) {
+            return redirect()->back()->with('error', $result['errors'][0] ?? lang('Backoffice.cs_action_err_save'));
+        }
+
+        return redirect()->back()->with(
+            'success',
+            ($result['activated'] ?? false)
+                ? lang('Backoffice.cs_action_activated')
+                : lang('Backoffice.cs_action_deactivated')
+        );
     }
 
     private function parseStatus(?string $status): ?bool

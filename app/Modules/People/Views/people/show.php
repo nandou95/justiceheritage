@@ -19,10 +19,12 @@ $fullName = trim(($record['prenom_personne'] ?? '') . ' ' . ($record['nom_person
             <i class="bi bi-arrow-left" aria-hidden="true"></i>
             <?= esc(lang('Backoffice.people_back_list')) ?>
         </a>
+        <?php if (can_access('backoffice/people/edit')): ?>
         <a class="btn btn-bo-primary" href="<?= site_url('backoffice/people/' . (int) $record['personne_id'] . '/edit') ?>">
             <i class="bi bi-pencil-square" aria-hidden="true"></i>
             <?= esc(lang('Backoffice.people_action_edit')) ?>
         </a>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -39,13 +41,15 @@ $fullName = trim(($record['prenom_personne'] ?? '') . ' ' . ($record['nom_person
                 <div>
                     <dt><?= esc(lang('Backoffice.people_field_cni_file')) ?></dt>
                     <dd>
-                        <?php if (! empty($record['upload_cni'])): ?>
+                        <?php if (! empty($record['upload_cni']) && can_access('backoffice/people/show')): ?>
                             <a href="<?= site_url('backoffice/people/' . (int) $record['personne_id'] . '/cni/view') ?>" target="_blank" rel="noopener" class="me-2">
                                 <i class="bi bi-eye" aria-hidden="true"></i> <?= esc(lang('Backoffice.people_action_view_cni')) ?>
                             </a>
                             <a href="<?= site_url('backoffice/people/' . (int) $record['personne_id'] . '/cni/download') ?>">
                                 <i class="bi bi-download" aria-hidden="true"></i> <?= esc(lang('Backoffice.people_action_download_cni')) ?>
                             </a>
+                        <?php elseif (! empty($record['upload_cni'])): ?>
+                            —
                         <?php else: ?>
                             —
                         <?php endif; ?>

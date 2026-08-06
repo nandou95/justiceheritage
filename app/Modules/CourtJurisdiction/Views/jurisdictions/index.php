@@ -8,9 +8,11 @@
         <h1><?= esc(lang('Backoffice.cj_title')) ?></h1>
         <p><?= esc(lang('Backoffice.cj_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/court-jurisdictions/create')): ?>
     <a class="btn btn-bo-primary" href="<?= site_url('backoffice/court-jurisdictions/create') ?>">
         <i class="bi bi-plus-lg" aria-hidden="true"></i> <?= esc(lang('Backoffice.cj_new')) ?>
     </a>
+    <?php endif; ?>
 </section>
 
 <section class="bo-panel bo-crud-panel">
@@ -52,9 +54,6 @@
                     <option value="false" <?= ($filters['status'] ?? '') === 'false' || ($filters['status'] ?? '') === '0' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_inactive')) ?></option>
                 </select>
             </div>
-            <div class="col-12 col-md-6 col-xl-1 d-flex align-items-end">
-                <button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button>
-            </div>
         </div>
     </form>
 
@@ -94,11 +93,17 @@
                         <td><span class="bo-status-pill <?= $row['is_active'] ? 'is-active' : 'is-inactive' ?>"><?= esc($row['status']) ?></span></td>
                         <td>
                             <div class="bo-action-group">
+                                <?php if (can_access('backoffice/court-jurisdictions/edit')): ?>
                                 <a class="btn btn-bo-icon" href="<?= site_url('backoffice/court-jurisdictions/' . $row['id'] . '/edit') ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.cj_action_edit'), 'attr') ?>"><i class="bi bi-pencil-square"></i></a>
+                                <?php endif; ?>
+                                <?php if (can_access('backoffice/court-jurisdictions/toggle-status')): ?>
                                 <button class="btn btn-bo-icon <?= $row['is_active'] ? 'is-danger' : 'is-success' ?>" type="button" data-bo-toggle-cj data-id="<?= esc($row['id']) ?>" data-name="<?= esc($row['name'], 'attr') ?>" data-activate="<?= $row['is_active'] ? '0' : '1' ?>" data-bs-toggle="tooltip" title="<?= esc($row['is_active'] ? lang('Backoffice.cj_action_deactivate') : lang('Backoffice.cj_action_activate'), 'attr') ?>">
                                     <i class="bi <?= $row['is_active'] ? 'bi-toggle-off' : 'bi-toggle-on' ?>"></i>
                                 </button>
+                                <?php endif; ?>
+                                <?php if (can_access('backoffice/court-jurisdictions/show')): ?>
                                 <a class="btn btn-bo-icon" href="<?= site_url('backoffice/court-jurisdictions/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.cj_action_view'), 'attr') ?>"><i class="bi bi-eye"></i></a>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>

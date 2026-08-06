@@ -30,8 +30,8 @@ class JurisdictionLevelService
         }
 
         return array_map(static function (array $row): array {
-            $active  = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            $recours = filter_var($row['is_recours'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $active  = db_bool($row['is_active'] ?? false);
+            $recours = db_bool($row['is_recours'] ?? false);
 
             return [
                 'id'          => (int) $row['niveau_juridiction_id'],
@@ -128,7 +128,7 @@ class JurisdictionLevelService
             return ['ok' => false, 'errors' => [lang('Backoffice.jl_err_not_found')]];
         }
 
-        $isActive   = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $isActive   = db_bool($row['is_active'] ?? false);
         $activating = ! $isActive;
 
         try {

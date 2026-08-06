@@ -48,6 +48,7 @@ class ProfilPermissionModel extends Model
                 ON p.permission_id = pp.permission_id
             WHERE pp.profil_id = ?
               AND pp.is_active = TRUE
+              AND p.is_active = TRUE
             ORDER BY p.description_permission ASC
         SQL;
 
@@ -62,6 +63,20 @@ class ProfilPermissionModel extends Model
     public function syncPermissions(int $profilId, array $permissionIds): void
     {
         $permissionIds = array_values(array_unique(array_filter(array_map('intval', $permissionIds))));
+
+        // Only enabled catalogue permissions may be assigned.
+        if ($permissionIds !== []) {
+            $enabledRows = $this->db->table('administration.permission')
+                ->select('permission_id')
+                ->whereIn('permission_id', $permissionIds)
+                ->where('is_active', true)
+                ->get()
+                ->getResultArray();
+            $permissionIds = array_map(
+                static fn (array $row): int => (int) $row['permission_id'],
+                $enabledRows
+            );
+        }
 
         $existing = $this->builder()
             ->select('profil_permission_id, permission_id, is_active')
@@ -78,7 +93,7 @@ class ProfilPermissionModel extends Model
 
         foreach ($selected as $permissionId => $_true) {
             if (isset($byPermission[$permissionId])) {
-                if (! filter_var($byPermission[$permissionId]['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                if (! db_bool($byPermission[$permissionId]['is_active'] ?? false)) {
                     $this->update((int) $byPermission[$permissionId]['profil_permission_id'], ['is_active' => true]);
                 }
                 unset($byPermission[$permissionId]);
@@ -93,7 +108,7 @@ class ProfilPermissionModel extends Model
         }
 
         foreach ($byPermission as $row) {
-            if (filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            if (db_bool($row['is_active'] ?? false)) {
                 $this->update((int) $row['profil_permission_id'], ['is_active' => false]);
             }
         }

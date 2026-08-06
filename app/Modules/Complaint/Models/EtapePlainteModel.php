@@ -33,12 +33,15 @@ class EtapePlainteModel extends Model
                 e.is_convocation,
                 e.is_audience,
                 nj.desc_niveau_juridiction,
-                COUNT(epp.etape_plainte_profil_id) FILTER (WHERE epp.is_active IS DISTINCT FROM FALSE) AS profiles_count
+                COUNT(DISTINCT epp.etape_plainte_profil_id) FILTER (WHERE epp.is_active IS DISTINCT FROM FALSE) AS profiles_count,
+                COUNT(DISTINCT epa.etape_plainte_action_id) AS actions_count
             FROM plainte.etape_plainte AS e
             LEFT JOIN juridiction.niveau_juridiction AS nj
                 ON nj.niveau_juridiction_id = e.niveau_juridiction_id
             LEFT JOIN plainte.etape_plainte_profil AS epp
                 ON epp.etape_plainte_id = e.etape_plainte_id
+            LEFT JOIN plainte.etape_plainte_action AS epa
+                ON epa.etape_plainte_id = e.etape_plainte_id
             WHERE 1 = 1
         SQL;
 

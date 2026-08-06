@@ -11,6 +11,7 @@
         <p><?= esc(lang('Backoffice.ntf_details_lead')) ?></p>
     </div>
     <div class="bo-crud-head-actions">
+        <?php if (can_access('backoffice/notifications/users/resend')): ?>
         <form method="post" action="<?= site_url('backoffice/notifications/users/' . $record['id'] . '/resend') ?>" onsubmit="return confirm('<?= esc(lang('Backoffice.ntf_resend_confirm'), 'js') ?>');">
             <?= csrf_field() ?>
             <button type="submit" class="btn btn-bo-primary">
@@ -18,6 +19,7 @@
                 <?= esc(lang('Backoffice.ntf_action_resend')) ?>
             </button>
         </form>
+        <?php endif; ?>
         <a class="btn btn-bo-secondary" href="<?= site_url('backoffice/notifications/users') ?>">
             <i class="bi bi-arrow-left" aria-hidden="true"></i>
             <?= esc(lang('Backoffice.ntf_back_list')) ?>

@@ -3,7 +3,7 @@
 <?= view('Modules\Administration\Views\partials\flash') ?>
 
 <?php
-$withinLabel = filter_var($record['dans_les_delais'] ?? false, FILTER_VALIDATE_BOOLEAN)
+$withinLabel = db_bool($record['dans_les_delais'] ?? false)
     ? lang('Backoffice.yes')
     : lang('Backoffice.no');
 $verdictLabel = trim(
@@ -30,7 +30,9 @@ $presentLabel = static fn ($present): string => filter_var($present, FILTER_VALI
     </div>
     <div class="bo-crud-head-actions">
         <a class="btn btn-bo-secondary" href="<?= site_url('backoffice/appeals') ?>"><i class="bi bi-arrow-left"></i> <?= esc(lang('Backoffice.apl_back_list')) ?></a>
+        <?php if (can_access('backoffice/appeals/edit')): ?>
         <a class="btn btn-bo-primary" href="<?= site_url('backoffice/appeals/' . (int) $record['recours_id'] . '/edit') ?>"><i class="bi bi-pencil-square"></i> <?= esc(lang('Backoffice.apl_action_edit')) ?></a>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -170,8 +172,10 @@ $tableIds[] = 'apl-docs-table';
                     <td><?= esc(trim((string) ($doc['uploaded_by_name'] ?? '')) !== '' ? $doc['uploaded_by_name'] : '—') ?></td>
                     <td>
                         <div class="bo-action-group">
+                            <?php if (can_access('backoffice/appeals/show')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/appeals/documents/' . $docId . '/view') ?>" target="_blank" rel="noopener" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.apl_doc_view'), 'attr') ?>"><i class="bi bi-eye"></i></a>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/appeals/documents/' . $docId . '/download') ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.apl_doc_download'), 'attr') ?>"><i class="bi bi-download"></i></a>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>

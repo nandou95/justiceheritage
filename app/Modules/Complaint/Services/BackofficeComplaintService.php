@@ -312,7 +312,7 @@ class BackofficeComplaintService
 
         if ($requireMandatoryDocs && $niveauId > 0) {
             foreach ($this->docTypes->listByNiveau($niveauId, true) as $type) {
-                if (! filter_var($type['is_obligatoire'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                if (! db_bool($type['is_obligatoire'] ?? false)) {
                     continue;
                 }
                 $typeId = (int) $type['type_document_id'];

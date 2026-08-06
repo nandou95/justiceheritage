@@ -28,19 +28,18 @@ class UtilisateurModel extends Model
         'commune_naissance_id',
         'zone_naissance_id',
         'colline_naissance_id',
-        'user_name',
         'mot_de_passe_hash',
         'derniere_connexion',
         'code_authentification',
+        'code_authentification_expire_at',
     ];
 
     /**
      * @param array{
-     *   province_id?: int|null,
-     *   commune_id?: int|null,
-     *   niveau_juridiction_id?: int|null,
-     *   juridiction_id?: int|null,
-     *   account_active?: bool|null
+     *   province_id?: int|null,      // maps to u.province_naissance_id
+     *   commune_id?: int|null,       // maps to u.commune_naissance_id
+     *   juridiction_id?: int|null,   // maps to u.juridiction_id
+     *   statut_compte_id?: int|null  // maps to u.statut_compte_id
      * } $filters
      * @return list<array<string, mixed>>
      */
@@ -104,19 +103,15 @@ class UtilisateurModel extends Model
 
         $params = [];
 
+        // Birthplace filters (administration.utilisateur columns).
         if (! empty($filters['province_id'])) {
-            $sql .= ' AND j.province_id = ?';
+            $sql .= ' AND u.province_naissance_id = ?';
             $params[] = (int) $filters['province_id'];
         }
 
         if (! empty($filters['commune_id'])) {
-            $sql .= ' AND j.commune_id = ?';
+            $sql .= ' AND u.commune_naissance_id = ?';
             $params[] = (int) $filters['commune_id'];
-        }
-
-        if (! empty($filters['niveau_juridiction_id'])) {
-            $sql .= ' AND j.niveau_juridiction_id = ?';
-            $params[] = (int) $filters['niveau_juridiction_id'];
         }
 
         if (! empty($filters['juridiction_id'])) {
@@ -124,16 +119,9 @@ class UtilisateurModel extends Model
             $params[] = (int) $filters['juridiction_id'];
         }
 
-        if (array_key_exists('account_active', $filters) && $filters['account_active'] !== null) {
-            if ($filters['account_active'] === true) {
-                $sql .= " AND LOWER(COALESCE(sc.desc_statut_compte, '')) ~ '(^|[^a-z])(actif|active)([^a-z]|$)'
-                          AND LOWER(COALESCE(sc.desc_statut_compte, '')) !~ '(inactif|inactive)'";
-            } else {
-                $sql .= " AND (
-                    LOWER(COALESCE(sc.desc_statut_compte, '')) ~ '(inactif|inactive)'
-                    OR LOWER(COALESCE(sc.desc_statut_compte, '')) !~ '(actif|active)'
-                )";
-            }
+        if (! empty($filters['statut_compte_id'])) {
+            $sql .= ' AND u.statut_compte_id = ?';
+            $params[] = (int) $filters['statut_compte_id'];
         }
 
         $sql .= ' ORDER BY u.nom_utilisateur ASC, u.prenom_utilisateur ASC';
@@ -201,31 +189,172 @@ class UtilisateurModel extends Model
 
     public function emailExists(string $email, ?int $ignoreId = null): bool
     {
-        $builder = $this->builder()->where('LOWER(email) =', mb_strtolower($email), false);
+        $sql = 'SELECT 1 FROM administration.utilisateur WHERE LOWER(email) = LOWER(?)';
+        $params = [$email];
         if ($ignoreId) {
-            $builder->where('utilisateur_id !=', $ignoreId);
+            $sql .= ' AND utilisateur_id != ?';
+            $params[] = $ignoreId;
         }
+        $sql .= ' LIMIT 1';
 
-        return $builder->countAllResults() > 0;
+        return $this->db->query($sql, $params)->getFirstRow() !== null;
     }
 
     public function cniExists(string $cni, ?int $ignoreId = null): bool
     {
-        $builder = $this->builder()->where('numero_cni', $cni);
+        $sql = 'SELECT 1 FROM administration.utilisateur WHERE numero_cni = ?';
+        $params = [$cni];
         if ($ignoreId) {
-            $builder->where('utilisateur_id !=', $ignoreId);
+            $sql .= ' AND utilisateur_id != ?';
+            $params[] = $ignoreId;
         }
+        $sql .= ' LIMIT 1';
 
-        return $builder->countAllResults() > 0;
+        return $this->db->query($sql, $params)->getFirstRow() !== null;
     }
 
     public function matriculeExists(string $matricule, ?int $ignoreId = null): bool
     {
-        $builder = $this->builder()->where('numero_matricule', $matricule);
+        $sql = 'SELECT 1 FROM administration.utilisateur WHERE numero_matricule = ?';
+        $params = [$matricule];
         if ($ignoreId) {
-            $builder->where('utilisateur_id !=', $ignoreId);
+            $sql .= ' AND utilisateur_id != ?';
+            $params[] = $ignoreId;
+        }
+        $sql .= ' LIMIT 1';
+
+        return $this->db->query($sql, $params)->getFirstRow() !== null;
+    }
+
+    /**
+     * Find a back-office user by CNI, employee number, or email (case-insensitive for email).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findByLoginIdentifier(string $identifier): ?array
+    {
+        $identifier = trim($identifier);
+        if ($identifier === '') {
+            return null;
         }
 
-        return $builder->countAllResults() > 0;
+        $sql = <<<'SQL'
+            SELECT *
+            FROM administration.utilisateur
+            WHERE numero_cni = ?
+               OR numero_matricule = ?
+               OR LOWER(email) = LOWER(?)
+            LIMIT 1
+        SQL;
+
+        $row = $this->db->query($sql, [$identifier, $identifier, $identifier])->getRowArray();
+
+        return $row ?: null;
+    }
+
+    public function setAuthenticationCode(int $utilisateurId, string $code, int $expiresAtUnix): bool
+    {
+        $expiresAt = (new \DateTimeImmutable('@' . $expiresAtUnix))
+            ->setTimezone(new \DateTimeZone(date_default_timezone_get()))
+            ->format('Y-m-d H:i:s');
+
+        $db = $this->db;
+
+        try {
+            $ok = $db->table($this->table)
+                ->where('utilisateur_id', $utilisateurId)
+                ->update([
+                    'code_authentification'           => $code,
+                    'code_authentification_expire_at' => $expiresAt,
+                ]);
+
+            if ($ok !== false) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            log_message('warning', 'Saving 2FA code without expire column: {message}', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            $ok = $db->table($this->table)
+                ->where('utilisateur_id', $utilisateurId)
+                ->update(['code_authentification' => $code]);
+
+            return $ok !== false;
+        } catch (\Throwable $e) {
+            log_message('error', 'Failed to persist 2FA code for utilisateur_id={id}: {message}', [
+                'id'      => (string) $utilisateurId,
+                'message' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    public function clearAuthenticationCode(int $utilisateurId): bool
+    {
+        $db = $this->db;
+
+        try {
+            $ok = $db->table($this->table)
+                ->where('utilisateur_id', $utilisateurId)
+                ->update([
+                    'code_authentification'           => null,
+                    'code_authentification_expire_at' => null,
+                ]);
+
+            if ($ok !== false) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            // Column may not exist yet.
+        }
+
+        try {
+            $ok = $db->table($this->table)
+                ->where('utilisateur_id', $utilisateurId)
+                ->update(['code_authentification' => null]);
+
+            return $ok !== false;
+        } catch (\Throwable $e) {
+            log_message('error', 'Failed to clear 2FA code for utilisateur_id={id}: {message}', [
+                'id'      => (string) $utilisateurId,
+                'message' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * If the stored code has expired, clear it and return true.
+     * When the expiry column is missing or null, returns false (session TTL still applies).
+     */
+    public function purgeExpiredAuthenticationCode(int $utilisateurId): bool
+    {
+        $user = $this->find($utilisateurId);
+        if (! is_array($user) || empty($user['code_authentification'])) {
+            return false;
+        }
+
+        if (! array_key_exists('code_authentification_expire_at', $user)) {
+            return false;
+        }
+
+        $rawExpire = $user['code_authentification_expire_at'] ?? null;
+        if ($rawExpire === null || $rawExpire === '') {
+            return false;
+        }
+
+        $expires = strtotime((string) $rawExpire);
+        if ($expires === false || time() > $expires) {
+            $this->clearAuthenticationCode($utilisateurId);
+
+            return true;
+        }
+
+        return false;
     }
 }

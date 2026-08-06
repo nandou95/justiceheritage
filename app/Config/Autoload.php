@@ -51,6 +51,7 @@ class Autoload extends AutoloadConfig
         'Modules\Transfer'         => APPPATH . 'Modules/Transfer',
         'Modules\Notification'     => APPPATH . 'Modules/Notification',
         'Modules\AuditLog'         => APPPATH . 'Modules/AuditLog',
+        'Modules\Dashboard'        => APPPATH . 'Modules/Dashboard',
     ];
 
     /**
@@ -100,5 +101,5 @@ class Autoload extends AutoloadConfig
      *
      * @var list<string>
      */
-    public $helpers = ['asset'];
+    public $helpers = ['asset', 'boolean', 'detail', 'permission'];
 }

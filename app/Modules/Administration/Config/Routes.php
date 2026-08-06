@@ -20,6 +20,8 @@ $routes->group('backoffice', ['namespace' => 'Modules\\Administration\\Controlle
     $routes->get('api/jurisdictions', 'Users::jurisdictions');
 
     $routes->get('permissions', 'Permissions::index');
+    $routes->get('api/permissions', 'Permissions::apiList');
+    $routes->get('api/csrf', 'Permissions::csrfToken');
     $routes->post('permissions', 'Permissions::store');
     $routes->post('permissions/(:num)', 'Permissions::update/$1');
     $routes->post('permissions/(:num)/toggle-status', 'Permissions::toggleStatus/$1');

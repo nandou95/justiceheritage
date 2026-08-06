@@ -46,7 +46,7 @@ class CourtJurisdictionConfigService
         }
 
         return array_map(static function (array $row): array {
-            $active = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $active = db_bool($row['is_active'] ?? false);
             $child  = trim(($row['code_juridiction'] ?? '') . ' — ' . ($row['nom_juridiction'] ?? ''), ' —');
             $parent = trim(($row['parent_code_juridiction'] ?? '') . ' — ' . ($row['parent_nom_juridiction'] ?? ''), ' —');
 
@@ -87,7 +87,7 @@ class CourtJurisdictionConfigService
             'configuration_juridiction_id' => (int) $row['configuration_juridiction_id'],
             'juridiction_id'               => (int) $row['juridiction_id'],
             'juridiction_parent_id'        => (int) ($row['juridiction_parent_id'] ?? 0),
-            'is_active'                    => filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            'is_active'                    => db_bool($row['is_active'] ?? false),
             'province_id'                  => $court['province_id'] ?? null,
             'commune_id'                   => $court['commune_id'] ?? null,
             'niveau_juridiction_id'        => $court['niveau_juridiction_id'] ?? null,
@@ -173,7 +173,7 @@ class CourtJurisdictionConfigService
             return ['ok' => false, 'errors' => [lang('Backoffice.cjc_err_not_found')]];
         }
 
-        $isActive   = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $isActive   = db_bool($row['is_active'] ?? false);
         $activating = ! $isActive;
 
         try {

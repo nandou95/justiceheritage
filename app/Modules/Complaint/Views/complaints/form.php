@@ -190,9 +190,9 @@ $witnesses    = $selected($record, 'witness_ids');
                 <div class="mb-3">
                     <label class="form-label">
                         <?= esc($type['libelle_type_document'] ?? $type['code_type_document']) ?>
-                        <?= filter_var($type['is_obligatoire'] ?? false, FILTER_VALIDATE_BOOLEAN) ? '*' : '' ?>
+                        <?= db_bool($type['is_obligatoire'] ?? false) ? '*' : '' ?>
                     </label>
-                    <input class="form-control" type="file" name="documents[<?= (int) $type['type_document_id'] ?>][]" accept=".pdf,.jpg,.jpeg,.png" <?= filter_var($type['is_obligatoire'] ?? false, FILTER_VALIDATE_BOOLEAN) && ! $isEdit ? 'required' : '' ?>>
+                    <input class="form-control" type="file" name="documents[<?= (int) $type['type_document_id'] ?>][]" accept=".pdf,.jpg,.jpeg,.png" <?= db_bool($type['is_obligatoire'] ?? false) && ! $isEdit ? 'required' : '' ?>>
                 </div>
             <?php endforeach; ?>
             <?php if ($docTypes === []): ?>

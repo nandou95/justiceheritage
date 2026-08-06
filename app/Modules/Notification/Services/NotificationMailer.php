@@ -2,9 +2,9 @@
 
 namespace Modules\Notification\Services;
 
+use App\Libraries\ReliableSmtpEmail;
 use CodeIgniter\Email\Email;
 use Config\Email as EmailConfig;
-use Config\Services;
 use Throwable;
 
 /**
@@ -41,6 +41,57 @@ class NotificationMailer
                 'loginUrl' => $loginUrl ?: site_url('login'),
             ]
         );
+    }
+
+    /**
+     * Welcome email for a Back Office user created by an administrator.
+     * Content is always rendered in French (system notification language).
+     *
+     * @param array{cni?:string,matricule?:string,email?:string,login_id?:string} $identifiers
+     */
+    public function sendBackofficeUserRegistration(
+        string $toEmail,
+        string $toName,
+        string $password,
+        array $identifiers = [],
+        ?string $loginUrl = null
+    ): bool {
+        $cni       = trim((string) ($identifiers['cni'] ?? ''));
+        $matricule = trim((string) ($identifiers['matricule'] ?? ''));
+        $email     = trim((string) ($identifiers['email'] ?? $toEmail));
+        $loginId   = trim((string) ($identifiers['login_id'] ?? ''));
+        if ($loginId === '') {
+            $loginId = $cni !== '' ? $cni : ($matricule !== '' ? $matricule : $email);
+        }
+
+        $language = service('language');
+        $previous = $language->getLocale();
+        $language->setLocale('fr');
+
+        try {
+            log_message('info', 'Invoking email notification "backoffice_user_registration" for {email}.', [
+                'email' => $toEmail,
+            ]);
+
+            return $this->send(
+                type: 'backoffice_user_registration',
+                toEmail: $toEmail,
+                toName: $toName,
+                subject: lang('Mail.subject_bo_user_registration'),
+                view: 'Modules\Notification\Views\emails\backoffice_user_registration',
+                data: [
+                    'name'      => $toName,
+                    'loginId'   => $loginId,
+                    'cni'       => $cni,
+                    'matricule' => $matricule,
+                    'email'     => $email,
+                    'password'  => $password,
+                    'loginUrl'  => $loginUrl ?: site_url('backoffice'),
+                ]
+            );
+        } finally {
+            $language->setLocale($previous);
+        }
     }
 
     public function sendEmailVerification(string $toEmail, string $toName, string $verifyUrl): bool
@@ -86,19 +137,35 @@ class NotificationMailer
             return false;
         }
 
-        return $this->send(
-            type: 'two_factor_code',
-            toEmail: $toEmail,
-            toName: $toName,
-            subject: lang('Mail.subject_2fa'),
-            view: 'Modules\Notification\Views\emails\two_factor_code',
-            data: [
-                'name'       => $toName,
-                'code'       => $code,
-                'ttlSeconds' => $ttl,
-                'ttlMinutes' => max(1, (int) ceil($ttl / 60)),
-            ]
-        );
+        // Verification emails are always rendered in French.
+        $language = service('language');
+        $previous = $language->getLocale();
+        $language->setLocale('fr');
+
+        try {
+            log_message('info', 'Invoking email notification "two_factor_code" for {email} via {host}:{port}/{crypto}.', [
+                'email'  => $toEmail,
+                'host'   => trim($this->config->SMTPHost),
+                'port'   => (string) (int) $this->config->SMTPPort,
+                'crypto' => (string) $this->config->SMTPCrypto,
+            ]);
+
+            return $this->send(
+                type: 'two_factor_code',
+                toEmail: $toEmail,
+                toName: $toName,
+                subject: lang('Mail.subject_2fa') ?: 'Votre code de vérification JusticeHeritage',
+                view: 'Modules\Notification\Views\emails\two_factor_code',
+                data: [
+                    'name'       => $toName,
+                    'code'       => $code,
+                    'ttlSeconds' => $ttl,
+                    'ttlMinutes' => max(1, (int) ceil($ttl / 60)),
+                ]
+            );
+        } finally {
+            $language->setLocale($previous);
+        }
     }
 
     public function sendComplaintSubmitted(string $toEmail, string $toName, string $complaintNumber, string $complaintTitle): bool
@@ -325,37 +392,32 @@ class NotificationMailer
 
     /**
      * Preferred transport first, then Gmail-friendly fallbacks.
+     * Many ISP/firewalls block 465 (implicit TLS) while allowing 587 (STARTTLS).
      *
      * @return list<array{host:string,port:int,crypto:string,timeout:int}>
      */
     private function transportAttempts(): array
     {
         $host    = trim($this->config->SMTPHost);
+        $timeout = max(20, (int) $this->config->SMTPTimeout);
         $primary = [
             'host'    => $host,
             'port'    => (int) $this->config->SMTPPort,
             'crypto'  => strtolower((string) $this->config->SMTPCrypto),
-            'timeout' => max(15, (int) $this->config->SMTPTimeout),
+            'timeout' => $timeout,
         ];
 
-        $attempts = [$primary];
+        $isGmail = str_contains(strtolower($host), 'gmail.com')
+            || str_contains(strtolower($host), 'googlemail.com');
 
-        if (! ($primary['port'] === 465 && $primary['crypto'] === 'ssl')) {
-            $attempts[] = [
-                'host'    => $host,
-                'port'    => 465,
-                'crypto'  => 'ssl',
-                'timeout' => max(30, (int) $this->config->SMTPTimeout),
-            ];
+        // Prefer 587/TLS first: many networks block outbound 465 while allowing submission/587.
+        $attempts = [];
+        if ($isGmail || ! ($primary['port'] === 587 && $primary['crypto'] === 'tls')) {
+            $attempts[] = ['host' => $host, 'port' => 587, 'crypto' => 'tls', 'timeout' => $timeout];
         }
-
-        if (! ($primary['port'] === 587 && $primary['crypto'] === 'tls')) {
-            $attempts[] = [
-                'host'    => $host,
-                'port'    => 587,
-                'crypto'  => 'tls',
-                'timeout' => max(30, (int) $this->config->SMTPTimeout),
-            ];
+        $attempts[] = $primary;
+        if (! ($primary['port'] === 465 && $primary['crypto'] === 'ssl')) {
+            $attempts[] = ['host' => $host, 'port' => 465, 'crypto' => 'ssl', 'timeout' => $timeout];
         }
 
         $unique = [];
@@ -388,7 +450,8 @@ class NotificationMailer
         $config->newline     = "\r\n";
         $config->CRLF        = "\r\n";
 
-        $email = Services::email($config, false);
+        // Shared by complainant portal and back-office (centralized NotificationMailer).
+        $email = new ReliableSmtpEmail($config);
         $email->clear(true);
         $email->setFrom($config->fromEmail, $config->fromName ?: 'JusticeHeritage');
         $email->setReplyTo($config->fromEmail, $config->fromName ?: 'JusticeHeritage');
@@ -400,6 +463,11 @@ class NotificationMailer
     private function extractSmtpError(string $debugger): string
     {
         $plain = trim(html_entity_decode(strip_tags($debugger)));
+
+        if (preg_match('/Handshake timed out|fsockopen\(\)|Unable to connect|n\'a pas répondu|connection.*timed out|timed out/i', $plain)) {
+            return 'SMTP connection failed/timed out. Outbound TCP to the SMTP host:port is blocked or unreachable from this server. Details: '
+                . $this->truncate($plain, 280);
+        }
 
         if (preg_match('/Handshake timed out/i', $plain)) {
             return 'TLS/SSL handshake timed out while connecting to SMTP.';

@@ -5,6 +5,8 @@
  * Expects:
  * - $active (string): current menu/submenu key
  * - $icon (callable): icon renderer
+ *
+ * Items without can_access() permission are omitted entirely.
  */
 $active = $active ?? 'dashboard';
 
@@ -14,13 +16,14 @@ $menu = [
         'label'    => lang('Backoffice.nav_dashboard'),
         'icon'     => 'grid',
         'children' => [
-            ['key' => 'dash-complaints', 'label' => lang('Backoffice.nav_dash_complaints'), 'icon' => 'inbox', 'url' => site_url('backoffice/module/dash-complaints')],
-            ['key' => 'dash-complainants', 'label' => lang('Backoffice.nav_dash_complainants'), 'icon' => 'people', 'url' => site_url('backoffice/module/dash-complainants')],
-            ['key' => 'dash-appeals', 'label' => lang('Backoffice.nav_dash_appeals'), 'icon' => 'appeal', 'url' => site_url('backoffice/module/dash-appeals')],
-            ['key' => 'dash-summons', 'label' => lang('Backoffice.nav_dash_summons'), 'icon' => 'mail', 'url' => site_url('backoffice/module/dash-summons')],
-            ['key' => 'dash-hearings', 'label' => lang('Backoffice.nav_dash_hearings'), 'icon' => 'calendar', 'url' => site_url('backoffice/module/dash-hearings')],
-            ['key' => 'dash-notifications', 'label' => lang('Backoffice.nav_dash_notifications'), 'icon' => 'bell', 'url' => site_url('backoffice/module/dash-notifications')],
-            ['key' => 'dash-court-jurisdictions', 'label' => lang('Backoffice.nav_dash_court_jurisdictions'), 'icon' => 'map', 'url' => site_url('backoffice/module/dash-court-jurisdictions')],
+            ['key' => 'dash-executive', 'label' => lang('Backoffice.nav_dash_executive'), 'icon' => 'star', 'url' => site_url('backoffice/dashboards/executive'), 'permission' => 'backoffice/dashboards/executive'],
+            ['key' => 'dash-complaints', 'label' => lang('Backoffice.nav_dash_complaints'), 'icon' => 'inbox', 'url' => site_url('backoffice/dashboards/complaints'), 'permission' => 'backoffice/dashboards/complaints'],
+            ['key' => 'dash-complainants', 'label' => lang('Backoffice.nav_dash_complainants'), 'icon' => 'people', 'url' => site_url('backoffice/dashboards/complainants'), 'permission' => 'backoffice/dashboards/complainants'],
+            ['key' => 'dash-appeals', 'label' => lang('Backoffice.nav_dash_appeals'), 'icon' => 'appeal', 'url' => site_url('backoffice/dashboards/appeals'), 'permission' => 'backoffice/dashboards/appeals'],
+            ['key' => 'dash-summons', 'label' => lang('Backoffice.nav_dash_summons'), 'icon' => 'mail', 'url' => site_url('backoffice/dashboards/summons'), 'permission' => 'backoffice/dashboards/summons'],
+            ['key' => 'dash-hearings', 'label' => lang('Backoffice.nav_dash_hearings'), 'icon' => 'calendar', 'url' => site_url('backoffice/dashboards/hearings'), 'permission' => 'backoffice/dashboards/hearings'],
+            ['key' => 'dash-notifications', 'label' => lang('Backoffice.nav_dash_notifications'), 'icon' => 'bell', 'url' => site_url('backoffice/dashboards/notifications'), 'permission' => 'backoffice/dashboards/notifications'],
+            ['key' => 'dash-court-jurisdictions', 'label' => lang('Backoffice.nav_dash_court_jurisdictions'), 'icon' => 'map', 'url' => site_url('backoffice/dashboards/courts'), 'permission' => 'backoffice/dashboards/courts'],
         ],
     ],
     [
@@ -28,9 +31,9 @@ $menu = [
         'label'    => lang('Backoffice.nav_administration'),
         'icon'     => 'shield',
         'children' => [
-            ['key' => 'users', 'label' => lang('Backoffice.nav_users'), 'icon' => 'users', 'url' => site_url('backoffice/users')],
-            ['key' => 'profiles', 'label' => lang('Backoffice.nav_profiles'), 'icon' => 'badge', 'url' => site_url('backoffice/profiles')],
-            ['key' => 'permissions', 'label' => lang('Backoffice.nav_permissions'), 'icon' => 'lock', 'url' => site_url('backoffice/permissions')],
+            ['key' => 'users', 'label' => lang('Backoffice.nav_users'), 'icon' => 'users', 'url' => site_url('backoffice/users'), 'permission' => 'backoffice/users'],
+            ['key' => 'profiles', 'label' => lang('Backoffice.nav_profiles'), 'icon' => 'badge', 'url' => site_url('backoffice/profiles'), 'permission' => 'backoffice/profiles'],
+            ['key' => 'permissions', 'label' => lang('Backoffice.nav_permissions'), 'icon' => 'lock', 'url' => site_url('backoffice/permissions'), 'permission' => 'backoffice/permissions'],
         ],
     ],
     [
@@ -38,43 +41,45 @@ $menu = [
         'label'    => lang('Backoffice.nav_court_jurisdiction'),
         'icon'     => 'map',
         'children' => [
-            ['key' => 'court-jurisdictions', 'label' => lang('Backoffice.nav_court_jurisdictions'), 'icon' => 'building', 'url' => site_url('backoffice/court-jurisdictions')],
-            ['key' => 'court-jurisdiction-config', 'label' => lang('Backoffice.nav_court_jurisdiction_config'), 'icon' => 'sliders', 'url' => site_url('backoffice/court-jurisdiction-configs')],
-            ['key' => 'jurisdiction-levels', 'label' => lang('Backoffice.nav_jurisdiction_levels'), 'icon' => 'layers', 'url' => site_url('backoffice/jurisdiction-levels')],
-            ['key' => 'jurisdiction-level-config', 'label' => lang('Backoffice.nav_jurisdiction_level_config'), 'icon' => 'sliders', 'url' => site_url('backoffice/jurisdiction-level-configs')],
+            ['key' => 'court-jurisdictions', 'label' => lang('Backoffice.nav_court_jurisdictions'), 'icon' => 'building', 'url' => site_url('backoffice/court-jurisdictions'), 'permission' => 'backoffice/court-jurisdictions'],
+            ['key' => 'court-jurisdiction-config', 'label' => lang('Backoffice.nav_court_jurisdiction_config'), 'icon' => 'sliders', 'url' => site_url('backoffice/court-jurisdiction-configs'), 'permission' => 'backoffice/court-jurisdiction-configs'],
+            ['key' => 'jurisdiction-levels', 'label' => lang('Backoffice.nav_jurisdiction_levels'), 'icon' => 'layers', 'url' => site_url('backoffice/jurisdiction-levels'), 'permission' => 'backoffice/jurisdiction-levels'],
+            ['key' => 'jurisdiction-level-config', 'label' => lang('Backoffice.nav_jurisdiction_level_config'), 'icon' => 'sliders', 'url' => site_url('backoffice/jurisdiction-level-configs'), 'permission' => 'backoffice/jurisdiction-level-configs'],
         ],
     ],
     [
-        'key'   => 'people',
-        'label' => lang('Backoffice.nav_people'),
-        'icon'  => 'people',
-        'url'   => site_url('backoffice/people'),
+        'key'        => 'people',
+        'label'      => lang('Backoffice.nav_people'),
+        'icon'       => 'people',
+        'url'        => site_url('backoffice/people'),
+        'permission' => 'backoffice/people',
     ],
     [
         'key'      => 'complaints',
         'label'    => lang('Backoffice.nav_complaints'),
         'icon'     => 'inbox',
         'children' => [
-            ['key' => 'complaint-stages', 'label' => lang('Backoffice.nav_complaint_stages'), 'icon' => 'steps', 'url' => site_url('backoffice/complaint-stages')],
-            ['key' => 'complaint-stage-config', 'label' => lang('Backoffice.nav_complaint_stage_config'), 'icon' => 'sliders', 'url' => site_url('backoffice/complaint-stage-configs')],
-            ['key' => 'complaint-statuses', 'label' => lang('Backoffice.nav_complaint_statuses'), 'icon' => 'status', 'url' => site_url('backoffice/complaint-statuses')],
-            ['key' => 'document-types', 'label' => lang('Backoffice.nav_document_types'), 'icon' => 'file', 'url' => site_url('backoffice/document-types')],
-            ['key' => 'complaints-list', 'label' => lang('Backoffice.nav_complaints_list'), 'icon' => 'folder', 'url' => site_url('backoffice/complaints')],
+            ['key' => 'complaint-stages', 'label' => lang('Backoffice.nav_complaint_stages'), 'icon' => 'steps', 'url' => site_url('backoffice/complaint-stages'), 'permission' => 'backoffice/complaint-stages'],
+            ['key' => 'complaint-stage-config', 'label' => lang('Backoffice.nav_complaint_stage_config'), 'icon' => 'sliders', 'url' => site_url('backoffice/complaint-stage-configs'), 'permission' => 'backoffice/complaint-stage-configs'],
+            ['key' => 'complaint-statuses', 'label' => lang('Backoffice.nav_complaint_statuses'), 'icon' => 'status', 'url' => site_url('backoffice/complaint-statuses'), 'permission' => 'backoffice/complaint-statuses'],
+            ['key' => 'document-types', 'label' => lang('Backoffice.nav_document_types'), 'icon' => 'file', 'url' => site_url('backoffice/document-types'), 'permission' => 'backoffice/document-types'],
+            ['key' => 'complaints-list', 'label' => lang('Backoffice.nav_complaints_list'), 'icon' => 'folder', 'url' => site_url('backoffice/complaints'), 'permission' => 'backoffice/complaints'],
         ],
     ],
     [
-        'key'   => 'appeals',
-        'label' => lang('Backoffice.nav_appeals'),
-        'icon'  => 'appeal',
-        'url'   => site_url('backoffice/appeals'),
+        'key'        => 'appeals',
+        'label'      => lang('Backoffice.nav_appeals'),
+        'icon'       => 'appeal',
+        'url'        => site_url('backoffice/appeals'),
+        'permission' => 'backoffice/appeals',
     ],
     [
         'key'      => 'summons',
         'label'    => lang('Backoffice.nav_summons'),
         'icon'     => 'mail',
         'children' => [
-            ['key' => 'summons-list', 'label' => lang('Backoffice.nav_summons_list'), 'icon' => 'mail', 'url' => site_url('backoffice/summons')],
-            ['key' => 'summons-statuses', 'label' => lang('Backoffice.nav_summons_statuses'), 'icon' => 'status', 'url' => site_url('backoffice/summons-statuses')],
+            ['key' => 'summons-list', 'label' => lang('Backoffice.nav_summons_list'), 'icon' => 'mail', 'url' => site_url('backoffice/summons'), 'permission' => 'backoffice/summons'],
+            ['key' => 'summons-statuses', 'label' => lang('Backoffice.nav_summons_statuses'), 'icon' => 'status', 'url' => site_url('backoffice/summons-statuses'), 'permission' => 'backoffice/summons-statuses'],
         ],
     ],
     [
@@ -82,8 +87,8 @@ $menu = [
         'label'    => lang('Backoffice.nav_hearings'),
         'icon'     => 'calendar',
         'children' => [
-            ['key' => 'hearings-list', 'label' => lang('Backoffice.nav_hearings_list'), 'icon' => 'calendar', 'url' => site_url('backoffice/hearings')],
-            ['key' => 'hearing-statuses', 'label' => lang('Backoffice.nav_hearing_statuses'), 'icon' => 'status', 'url' => site_url('backoffice/hearing-statuses')],
+            ['key' => 'hearings-list', 'label' => lang('Backoffice.nav_hearings_list'), 'icon' => 'calendar', 'url' => site_url('backoffice/hearings'), 'permission' => 'backoffice/hearings'],
+            ['key' => 'hearing-statuses', 'label' => lang('Backoffice.nav_hearing_statuses'), 'icon' => 'status', 'url' => site_url('backoffice/hearing-statuses'), 'permission' => 'backoffice/hearing-statuses'],
         ],
     ],
     [
@@ -91,8 +96,8 @@ $menu = [
         'label'    => lang('Backoffice.nav_verdicts'),
         'icon'     => 'scale',
         'children' => [
-            ['key' => 'verdict-types', 'label' => lang('Backoffice.nav_verdict_types'), 'icon' => 'list', 'url' => site_url('backoffice/verdict-types')],
-            ['key' => 'verdicts-list', 'label' => lang('Backoffice.nav_verdicts_list'), 'icon' => 'scale', 'url' => site_url('backoffice/verdicts')],
+            ['key' => 'verdict-types', 'label' => lang('Backoffice.nav_verdict_types'), 'icon' => 'list', 'url' => site_url('backoffice/verdict-types'), 'permission' => 'backoffice/verdict-types'],
+            ['key' => 'verdicts-list', 'label' => lang('Backoffice.nav_verdicts_list'), 'icon' => 'scale', 'url' => site_url('backoffice/verdicts'), 'permission' => 'backoffice/verdicts'],
         ],
     ],
     [
@@ -100,8 +105,8 @@ $menu = [
         'label'    => lang('Backoffice.nav_case_transfers'),
         'icon'     => 'transfer',
         'children' => [
-            ['key' => 'transfer-statuses', 'label' => lang('Backoffice.nav_transfer_statuses'), 'icon' => 'status', 'url' => site_url('backoffice/transfer-statuses')],
-            ['key' => 'case-transfers-list', 'label' => lang('Backoffice.nav_case_transfers_list'), 'icon' => 'transfer', 'url' => site_url('backoffice/module/case-transfers-list')],
+            ['key' => 'transfer-statuses', 'label' => lang('Backoffice.nav_transfer_statuses'), 'icon' => 'status', 'url' => site_url('backoffice/transfer-statuses'), 'permission' => 'backoffice/transfer-statuses'],
+            ['key' => 'case-transfers-list', 'label' => lang('Backoffice.nav_case_transfers_list'), 'icon' => 'transfer', 'url' => site_url('backoffice/transfers'), 'permission' => 'backoffice/transfers'],
         ],
     ],
     [
@@ -109,8 +114,8 @@ $menu = [
         'label'    => lang('Backoffice.nav_notifications'),
         'icon'     => 'bell',
         'children' => [
-            ['key' => 'ntf-complainants', 'label' => lang('Backoffice.nav_ntf_complainants'), 'icon' => 'people', 'url' => site_url('backoffice/notifications/complainants')],
-            ['key' => 'ntf-users', 'label' => lang('Backoffice.nav_ntf_users'), 'icon' => 'users', 'url' => site_url('backoffice/notifications/users')],
+            ['key' => 'ntf-complainants', 'label' => lang('Backoffice.nav_ntf_complainants'), 'icon' => 'people', 'url' => site_url('backoffice/notifications/complainants'), 'permission' => 'backoffice/notifications/complainants'],
+            ['key' => 'ntf-users', 'label' => lang('Backoffice.nav_ntf_users'), 'icon' => 'users', 'url' => site_url('backoffice/notifications/users'), 'permission' => 'backoffice/notifications/users'],
         ],
     ],
     [
@@ -118,11 +123,37 @@ $menu = [
         'label'    => lang('Backoffice.nav_logs'),
         'icon'     => 'list',
         'children' => [
-            ['key' => 'logs-complainants', 'label' => lang('Backoffice.nav_logs_complainants'), 'icon' => 'people', 'url' => site_url('backoffice/system-logs/complainants')],
-            ['key' => 'logs-users', 'label' => lang('Backoffice.nav_logs_users'), 'icon' => 'users', 'url' => site_url('backoffice/system-logs/users')],
+            ['key' => 'logs-complainants', 'label' => lang('Backoffice.nav_logs_complainants'), 'icon' => 'people', 'url' => site_url('backoffice/system-logs/complainants'), 'permission' => 'backoffice/system-logs/complainants'],
+            ['key' => 'logs-users', 'label' => lang('Backoffice.nav_logs_users'), 'icon' => 'users', 'url' => site_url('backoffice/system-logs/users'), 'permission' => 'backoffice/system-logs/users'],
         ],
     ],
 ];
+
+// Filter children / leaf items by permission.
+$filtered = [];
+foreach ($menu as $item) {
+    if (! empty($item['children'])) {
+        $children = [];
+        foreach ($item['children'] as $child) {
+            $perm = (string) ($child['permission'] ?? '');
+            if ($perm === '' || can_access($perm)) {
+                $children[] = $child;
+            }
+        }
+        if ($children === []) {
+            continue;
+        }
+        $item['children'] = $children;
+        $filtered[]       = $item;
+        continue;
+    }
+
+    $perm = (string) ($item['permission'] ?? '');
+    if ($perm === '' || can_access($perm)) {
+        $filtered[] = $item;
+    }
+}
+$menu = $filtered;
 
 $childActive = static function (array $children) use ($active): bool {
     foreach ($children as $child) {

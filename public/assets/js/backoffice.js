@@ -81,12 +81,30 @@
   const dtLang = window.JH_DT?.language || {};
   const dataTables = new Map();
 
-  document.querySelectorAll("table.jh-datatable").forEach((table) => {
-    if (typeof DataTable === "undefined") {
+  const destroyDataTable = (table) => {
+    if (!table || typeof DataTable === "undefined") {
       return;
     }
     if (typeof DataTable.isDataTable === "function" && DataTable.isDataTable(table)) {
-      return;
+      try {
+        new DataTable.Api(table).destroy();
+      } catch (_err) {
+        const existing = dataTables.get(table.id) || dataTables.get(table);
+        existing?.destroy?.();
+      }
+    }
+    if (table.id) {
+      dataTables.delete(table.id);
+    }
+    dataTables.delete(table);
+  };
+
+  const initDataTable = (table) => {
+    if (!table || typeof DataTable === "undefined") {
+      return null;
+    }
+    if (typeof DataTable.isDataTable === "function" && DataTable.isDataTable(table)) {
+      return dataTables.get(table.id) || dataTables.get(table) || null;
     }
 
     const pageLength = Number(table.dataset.pageLength || 10);
@@ -122,30 +140,178 @@
     });
 
     dataTables.set(table.id || table, dt);
+    if (table.id) {
+      dataTables.set(table, dt);
+    }
+    return dt;
+  };
+
+  document.querySelectorAll("table.jh-datatable").forEach((table) => {
+    initDataTable(table);
   });
 
   const bindTableSearch = (inputId, tableId) => {
     const input = document.getElementById(inputId);
-    const table = document.getElementById(tableId);
-    if (!input || !table) {
-      return;
-    }
-    const dt = dataTables.get(tableId) || dataTables.get(table);
-    if (!dt) {
+    if (!input) {
       return;
     }
     input.addEventListener("input", () => {
+      const table = document.getElementById(tableId);
+      const dt = dataTables.get(tableId) || (table ? dataTables.get(table) : null);
+      if (!dt) {
+        return;
+      }
       dt.search(input.value).draw();
     });
   };
 
+  const refreshTooltips = (scope) => {
+    if (!window.bootstrap?.Tooltip) {
+      return;
+    }
+    (scope || document).querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+      bootstrap.Tooltip.getOrCreateInstance(el);
+    });
+  };
+
+  /**
+   * Live AJAX list filters for every GET .bo-filters form.
+   * Removes Filter buttons, reloads the table wrap via Fetch, keeps cascades intact.
+   */
+  const initLiveListFilters = () => {
+    document.querySelectorAll("form.bo-filters").forEach((form) => {
+      if (form.dataset.boLiveBound === "1") {
+        return;
+      }
+      if ((form.getAttribute("method") || "get").toLowerCase() !== "get") {
+        return;
+      }
+      if (form.closest(".modal")) {
+        return;
+      }
+
+      const panel = form.closest(".bo-panel, .bo-crud-panel") || form.parentElement;
+      if (!panel || panel.hasAttribute("data-bo-perm-live")) {
+        return;
+      }
+
+      form.dataset.boLiveBound = "1";
+      panel.setAttribute("data-bo-live-list", "");
+
+      form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+        const col = btn.closest('[class*="col-"]');
+        (col || btn).remove();
+      });
+
+      let timer = null;
+      let requestSeq = 0;
+
+      const buildUrl = () => {
+        const action = form.getAttribute("action") || window.location.pathname;
+        const params = new URLSearchParams();
+        const data = new FormData(form);
+        data.forEach((value, key) => {
+          const trimmed = String(value ?? "").trim();
+          if (trimmed !== "") {
+            params.append(key, trimmed);
+          }
+        });
+        const qs = params.toString();
+        return qs ? `${action}?${qs}` : action;
+      };
+
+      const reloadList = async () => {
+        const wrap = panel.querySelector(".bo-table-wrap");
+        if (!wrap) {
+          return;
+        }
+        const currentTable = wrap.querySelector("table");
+        const tableId = currentTable?.id || "";
+        const seq = ++requestSeq;
+        const url = buildUrl();
+
+        panel.classList.add("is-filtering");
+        try {
+          const response = await fetch(url, {
+            headers: {
+              Accept: "text/html",
+              "X-Requested-With": "XMLHttpRequest",
+            },
+            credentials: "same-origin",
+            cache: "no-store",
+          });
+          if (!response.ok) {
+            return;
+          }
+          const html = await response.text();
+          if (seq !== requestSeq) {
+            return;
+          }
+
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const nextTable = tableId ? doc.getElementById(tableId) : doc.querySelector(".bo-table-wrap table");
+          const nextWrap = nextTable?.closest(".bo-table-wrap") || doc.querySelector(".bo-table-wrap");
+          if (!nextWrap) {
+            return;
+          }
+
+          if (currentTable) {
+            destroyDataTable(currentTable);
+          }
+          wrap.replaceWith(nextWrap);
+          nextWrap.querySelectorAll("table.jh-datatable").forEach((table) => {
+            const dt = initDataTable(table);
+            const searchInput = panel.querySelector(".bo-table-search input[type='search'], .bo-table-search input");
+            if (dt && searchInput && searchInput.value) {
+              dt.search(searchInput.value).draw();
+            }
+          });
+          refreshTooltips(nextWrap);
+          history.replaceState(history.state, "", url);
+          document.dispatchEvent(new CustomEvent("bo:list-reloaded", { detail: { panel, form, url } }));
+        } catch (_err) {
+          // Keep current rows on network errors.
+        } finally {
+          if (seq === requestSeq) {
+            panel.classList.remove("is-filtering");
+          }
+        }
+      };
+
+      const scheduleReload = (delay = 280) => {
+        clearTimeout(timer);
+        timer = setTimeout(reloadList, delay);
+      };
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        scheduleReload(0);
+      });
+
+      form.querySelectorAll("select, input").forEach((field) => {
+        const eventName = field.tagName === "SELECT" || field.type === "date" || field.type === "datetime-local"
+          ? "change"
+          : "input";
+        field.addEventListener(eventName, () => {
+          // Wait for cascade option refreshes before reading FormData.
+          scheduleReload(field.tagName === "SELECT" ? 550 : 280);
+        });
+      });
+
+      form._boLiveReload = reloadList;
+    });
+  };
+
+  initLiveListFilters();
+
   bindTableSearch("users-table-search", "users-table");
-  bindTableSearch("permissions-table-search", "permissions-table");
+  // Permissions search is handled by live AJAX filters (data-bo-perm-live).
   bindTableSearch("profiles-table-search", "profiles-table");
   bindTableSearch("profile-permissions-search", "profile-permissions-table");
   bindTableSearch("people-table-search", "people-table");
   bindTableSearch("people-complaints-search", "people-complaints-table");
   bindTableSearch("cs-table-search", "cs-table");
+  bindTableSearch("cs-actions-table-search", "cs-actions-table");
   bindTableSearch("csc-table-search", "csc-table");
   bindTableSearch("cst-table-search", "cst-table");
   bindTableSearch("dt-table-search", "dt-table");
@@ -160,6 +326,11 @@
   bindTableSearch("vrd-table-search", "vrd-table");
   bindTableSearch("vrd-type-table-search", "vrd-type-table");
   bindTableSearch("trf-st-table-search", "trf-st-table");
+  bindTableSearch("trf-table-search", "trf-table");
+  bindTableSearch("cj-table-search", "cj-table");
+  bindTableSearch("cjc-table-search", "cjc-table");
+  bindTableSearch("jl-table-search", "jl-table");
+  bindTableSearch("jlc-table-search", "jlc-table");
   bindTableSearch("logs-c-table-search", "logs-c-table");
   bindTableSearch("logs-u-table-search", "logs-u-table");
   bindTableSearch("ntf-c-table-search", "ntf-c-table");
@@ -270,6 +441,7 @@
       if (!commune || !apiCommunes) {
         return;
       }
+      fillSelect(commune, [], commune.options[0]?.textContent || "");
       const options = province.value
         ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`)
         : [];
@@ -318,46 +490,20 @@
   if (userFilters) {
     const province = userFilters.querySelector('[data-filter="province"]');
     const commune = userFilters.querySelector('[data-filter="commune"]');
-    const niveau = userFilters.querySelector('[data-filter="niveau"]');
-    const juridiction = userFilters.querySelector('[data-filter="juridiction"]');
     const apiCommunes = userFilters.dataset.apiCommunes || "";
-    const apiJurisdictions = userFilters.dataset.apiJurisdictions || "";
-
-    const refreshJurisdictions = async () => {
-      if (!juridiction || !apiJurisdictions) {
-        return;
-      }
-      const params = new URLSearchParams();
-      if (province?.value) {
-        params.set("province_id", province.value);
-      }
-      if (commune?.value) {
-        params.set("commune_id", commune.value);
-      }
-      if (niveau?.value) {
-        params.set("niveau_juridiction_id", niveau.value);
-      }
-      const qs = params.toString();
-      const options = await fetchOptions(`${apiJurisdictions}${qs ? `?${qs}` : ""}`);
-      fillSelect(juridiction, options, juridiction.options[0]?.textContent || "");
-    };
 
     province?.addEventListener("change", async () => {
-      if (commune && apiCommunes) {
-        const options = province.value
-          ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`)
-          : [];
-        fillSelect(commune, options, commune.options[0]?.textContent || "");
+      if (!commune) {
+        return;
       }
-      await refreshJurisdictions();
-    });
-
-    commune?.addEventListener("change", () => {
-      refreshJurisdictions();
-    });
-
-    niveau?.addEventListener("change", () => {
-      refreshJurisdictions();
+      const allLabel = commune.options[0]?.textContent || "";
+      fillSelect(commune, [], allLabel);
+      if (province.value && apiCommunes) {
+        const options = await fetchOptions(
+          `${apiCommunes}?province_id=${encodeURIComponent(province.value)}`
+        );
+        fillSelect(commune, options, allLabel);
+      }
     });
   }
 
@@ -395,13 +541,186 @@
       fillSelect(colline, options, colline?.options[0]?.textContent || "");
     });
 
-    userForm.addEventListener("submit", (event) => {
-      if (!userForm.checkValidity()) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      userForm.classList.add("was-validated");
-    });
+    const wizardRoot = userForm.querySelector("[data-wizard]");
+    if (userForm.hasAttribute("data-bo-user-wizard") && wizardRoot) {
+      const panes = Array.from(userForm.querySelectorAll("[data-wizard-step]"));
+      const indicators = Array.from(userForm.querySelectorAll("[data-wizard-indicator]"));
+      const statusEl = userForm.querySelector("[data-wizard-status]");
+      const prevBtn = userForm.querySelector("[data-wizard-prev]");
+      const nextBtn = userForm.querySelector("[data-wizard-next]");
+      const submitBtn = userForm.querySelector("[data-wizard-submit]");
+      const totalSteps = panes.length || 2;
+      let currentStep = 1;
+      const progressTpl = window.JH_USER_WIZARD_I18N?.progress || "Step {0} of {1}";
+
+      const formatProgress = (step) =>
+        String(progressTpl)
+          .replaceAll("{0}", String(step))
+          .replaceAll("{1}", String(totalSteps));
+
+      const paneFields = (pane) =>
+        Array.from(pane.querySelectorAll("input, select, textarea")).filter(
+          (el) => !el.disabled && el.type !== "hidden" && el.type !== "submit" && el.type !== "button"
+        );
+
+      const msgRequired = userForm.dataset.msgRequired || "";
+      const msgEmail = userForm.dataset.msgEmail || "";
+      const msgMinAge = userForm.dataset.msgMinAge || "";
+
+      const syncFeedback = (field) => {
+        const feedback = field.parentElement?.querySelector(".invalid-feedback");
+        if (!feedback) {
+          return;
+        }
+        if (field.validity.valid) {
+          feedback.textContent = msgRequired;
+          return;
+        }
+        if (field.validationMessage) {
+          feedback.textContent = field.validationMessage;
+        } else if (field.validity.valueMissing) {
+          feedback.textContent = msgRequired;
+        }
+      };
+
+      const applyFieldRules = (field) => {
+        if (typeof field.value === "string" && field.type !== "date" && field.tagName !== "SELECT") {
+          field.value = field.value.trim();
+        }
+
+        field.setCustomValidity("");
+
+        const maxLen = Number(field.dataset.maxLength || 0);
+        if (maxLen > 0 && typeof field.value === "string" && field.value.length > maxLen) {
+          field.setCustomValidity(field.dataset.maxMsg || msgRequired);
+        }
+
+        if (field.type === "email" && field.value) {
+          const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value);
+          if (!emailOk) {
+            field.setCustomValidity(msgEmail || field.validationMessage || msgRequired);
+          }
+        }
+
+        if (field.id === "date_naissance" && field.value) {
+          const max = field.getAttribute("max");
+          if (max && field.value > max) {
+            field.setCustomValidity(msgMinAge || msgRequired);
+          }
+        }
+
+        syncFeedback(field);
+      };
+
+      const validateStep = (step) => {
+        const pane = panes.find((p) => Number(p.dataset.wizardStep) === step);
+        if (!pane) {
+          return true;
+        }
+        let valid = true;
+        paneFields(pane).forEach((field) => {
+          applyFieldRules(field);
+          if (!field.checkValidity()) {
+            valid = false;
+            field.classList.add("is-invalid");
+          } else {
+            field.classList.remove("is-invalid");
+          }
+          syncFeedback(field);
+        });
+        userForm.classList.add("was-validated");
+        if (!valid) {
+          const firstInvalid = pane.querySelector(":invalid, .is-invalid");
+          firstInvalid?.focus?.();
+        }
+        return valid;
+      };
+
+      userForm.querySelectorAll("input, select, textarea").forEach((field) => {
+        field.addEventListener("input", () => {
+          applyFieldRules(field);
+          if (field.checkValidity()) {
+            field.classList.remove("is-invalid");
+          }
+          syncFeedback(field);
+        });
+        field.addEventListener("blur", () => {
+          applyFieldRules(field);
+          if (!field.checkValidity()) {
+            field.classList.add("is-invalid");
+          } else {
+            field.classList.remove("is-invalid");
+          }
+          syncFeedback(field);
+        });
+      });
+
+      const showStep = (step) => {
+        currentStep = Math.min(Math.max(step, 1), totalSteps);
+        panes.forEach((pane) => {
+          const isActive = Number(pane.dataset.wizardStep) === currentStep;
+          pane.classList.toggle("is-active", isActive);
+          pane.hidden = !isActive;
+        });
+        indicators.forEach((indicator) => {
+          const idx = Number(indicator.dataset.wizardIndicator);
+          indicator.classList.toggle("is-active", idx === currentStep);
+          indicator.classList.toggle("is-complete", idx < currentStep);
+        });
+        if (statusEl) {
+          statusEl.textContent = formatProgress(currentStep);
+        }
+        if (prevBtn) {
+          prevBtn.hidden = currentStep <= 1;
+        }
+        if (nextBtn) {
+          nextBtn.hidden = currentStep >= totalSteps;
+        }
+        if (submitBtn) {
+          submitBtn.hidden = currentStep < totalSteps;
+        }
+      };
+
+      prevBtn?.addEventListener("click", () => {
+        showStep(currentStep - 1);
+      });
+
+      nextBtn?.addEventListener("click", () => {
+        if (!validateStep(currentStep)) {
+          return;
+        }
+        showStep(currentStep + 1);
+      });
+
+      userForm.addEventListener("submit", (event) => {
+        if (currentStep < totalSteps) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (validateStep(currentStep)) {
+            showStep(currentStep + 1);
+          }
+          return;
+        }
+        for (let step = 1; step <= totalSteps; step += 1) {
+          if (!validateStep(step)) {
+            event.preventDefault();
+            event.stopPropagation();
+            showStep(step);
+            return;
+          }
+        }
+      });
+
+      showStep(1);
+    } else {
+      userForm.addEventListener("submit", (event) => {
+        if (!userForm.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        userForm.classList.add("was-validated");
+      });
+    }
   }
 
   const userStatusModalEl = document.getElementById("userStatusModal");
@@ -413,23 +732,207 @@
     const modal = bootstrap.Modal.getOrCreateInstance(userStatusModalEl);
     const i18n = window.JH_USERS_I18N;
 
-    document.querySelectorAll("[data-bo-toggle-user]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-user-id");
-        const name = btn.getAttribute("data-user-name") || "";
-        const activate = btn.getAttribute("data-activate") === "1";
-        form.action = i18n.toggleUrl.replace("__ID__", id);
-        title.textContent = activate ? i18n.activateTitle : i18n.deactivateTitle;
-        message.textContent = `${activate ? i18n.activateMessage : i18n.deactivateMessage}${name ? ` (${name})` : ""}`;
-        confirmBtn.textContent = activate ? i18n.activateBtn : i18n.deactivateBtn;
-        confirmBtn.className = `btn ${activate ? "btn-success" : "btn-danger"}`;
-        modal.show();
-      });
+    document.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-bo-toggle-user]");
+      if (!btn) {
+        return;
+      }
+      const id = btn.getAttribute("data-user-id");
+      const name = btn.getAttribute("data-user-name") || "";
+      const activate = btn.getAttribute("data-activate") === "1";
+      form.action = i18n.toggleUrl.replace("__ID__", id);
+      title.textContent = activate ? i18n.activateTitle : i18n.deactivateTitle;
+      message.textContent = `${activate ? i18n.activateMessage : i18n.deactivateMessage}${name ? ` (${name})` : ""}`;
+      confirmBtn.textContent = activate ? i18n.activateBtn : i18n.deactivateBtn;
+      confirmBtn.className = `btn ${activate ? "btn-success" : "btn-danger"}`;
+      modal.show();
     });
   }
 
   const permFormModalEl = document.getElementById("permissionFormModal");
   const permStatusModalEl = document.getElementById("permissionStatusModal");
+  const permLiveRoot = document.querySelector("[data-bo-perm-live]");
+
+  const escapeHtml = (value) => String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+  const syncCsrfTokens = (name, hash) => {
+    if (!name || !hash) {
+      return;
+    }
+    document.querySelectorAll(`input[name="${CSS.escape(name)}"]`).forEach((input) => {
+      input.value = hash;
+    });
+  };
+
+  const refreshCsrfTokens = async () => {
+    const url = window.JH_PERM_I18N?.csrfUrl;
+    if (!url) {
+      return;
+    }
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        return;
+      }
+      const payload = await response.json();
+      if (payload.csrfName && payload.csrfHash) {
+        syncCsrfTokens(payload.csrfName, payload.csrfHash);
+      }
+    } catch (_err) {
+      // Keep existing tokens if refresh fails.
+    }
+  };
+
+  const getCsrfToken = () => {
+    const input = document.querySelector(
+      "#permissionStatusForm input[type='hidden'][name], #permissionForm input[type='hidden'][name]"
+    );
+    if (input && input.name && input.value) {
+      return { name: input.name, value: input.value };
+    }
+    return null;
+  };
+
+  const refreshPermissionTooltips = (scope) => {
+    if (typeof bootstrap === "undefined" || !bootstrap.Tooltip) {
+      return;
+    }
+    (scope || document).querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+      bootstrap.Tooltip.getOrCreateInstance(el);
+    });
+  };
+
+  const rebuildPermissionsTable = (items) => {
+    const table = document.getElementById("permissions-table");
+    if (!table || !window.JH_PERM_I18N) {
+      return;
+    }
+    const i18n = window.JH_PERM_I18N;
+    const tbody = table.querySelector("tbody");
+    if (!tbody) {
+      return;
+    }
+
+    if (typeof DataTable !== "undefined" && typeof DataTable.isDataTable === "function" && DataTable.isDataTable(table)) {
+      try {
+        new DataTable.Api(table).destroy();
+      } catch (_err) {
+        const existing = dataTables.get("permissions-table") || dataTables.get(table);
+        existing?.destroy?.();
+      }
+      dataTables.delete("permissions-table");
+      dataTables.delete(table);
+    }
+
+    if (!items.length) {
+      tbody.innerHTML = `<tr><td colspan="4">${escapeHtml(i18n.empty || "")}</td></tr>`;
+    } else {
+      tbody.innerHTML = items.map((row) => {
+        const active = !!row.is_active;
+        const activate = active ? "0" : "1";
+        const toggleTitle = active ? i18n.deactivateAction : i18n.activateAction;
+        const toggleClass = active ? "is-danger" : "is-success";
+        const toggleIcon = active ? "bi-toggle-off" : "bi-toggle-on";
+        const statusClass = active ? "is-active" : "is-inactive";
+        return `<tr>
+          <td>${escapeHtml(row.description)}</td>
+          <td><code class="bo-route-code">${escapeHtml(row.url_route)}</code></td>
+          <td><span class="bo-status-pill ${statusClass}">${escapeHtml(row.status)}</span></td>
+          <td>
+            <div class="bo-action-group">
+              <button class="btn btn-bo-icon" type="button" data-bo-perm-edit data-id="${escapeHtml(row.id)}" data-description="${escapeHtml(row.description)}" data-route="${escapeHtml(row.url_route)}" data-bs-toggle="tooltip" title="${escapeHtml(i18n.editAction)}">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                <span class="visually-hidden">${escapeHtml(i18n.editAction)}</span>
+              </button>
+              <button class="btn btn-bo-icon ${toggleClass}" type="button" data-bo-toggle-perm data-id="${escapeHtml(row.id)}" data-description="${escapeHtml(row.description)}" data-activate="${activate}" data-bs-toggle="tooltip" title="${escapeHtml(toggleTitle)}">
+                <i class="bi ${toggleIcon}" aria-hidden="true"></i>
+                <span class="visually-hidden">${escapeHtml(toggleTitle)}</span>
+              </button>
+            </div>
+          </td>
+        </tr>`;
+      }).join("");
+    }
+
+    if (typeof DataTable !== "undefined") {
+      const pageLength = Number(table.dataset.pageLength || 10);
+      const orderCol = Number(table.dataset.orderCol ?? 0);
+      const orderDir = table.dataset.orderDir || "asc";
+      const dt = new DataTable(table, {
+        language: dtLang,
+        pageLength,
+        autoWidth: false,
+        order: orderCol >= 0 ? [[orderCol, orderDir]] : [],
+        columnDefs: [
+          { orderable: false, targets: [3] },
+          { searchable: false, targets: [3] },
+        ],
+        dom: table.dataset.dom || "lrtip",
+      });
+      dataTables.set("permissions-table", dt);
+      dataTables.set(table, dt);
+    }
+
+    refreshPermissionTooltips(tbody);
+  };
+
+  if (permLiveRoot && window.JH_PERM_I18N?.listUrl) {
+    const statusSelect = permLiveRoot.querySelector('[data-perm-filter="status"]');
+    const searchInput = permLiveRoot.querySelector('[data-perm-filter="q"]');
+    let searchTimer = null;
+    let requestSeq = 0;
+
+    const loadPermissions = async () => {
+      const seq = ++requestSeq;
+      const params = new URLSearchParams();
+      const status = statusSelect?.value || "";
+      const q = (searchInput?.value || "").trim();
+      if (status) {
+        params.set("status", status);
+      }
+      if (q) {
+        params.set("q", q);
+      }
+
+      try {
+        const response = await fetch(`${window.JH_PERM_I18N.listUrl}?${params.toString()}`, {
+          headers: { Accept: "application/json" },
+          credentials: "same-origin",
+        });
+        if (!response.ok) {
+          return;
+        }
+        const payload = await response.json();
+        if (seq !== requestSeq) {
+          return;
+        }
+        rebuildPermissionsTable(Array.isArray(payload.items) ? payload.items : []);
+      } catch (_err) {
+        // Keep current rows on network errors.
+      }
+    };
+
+    statusSelect?.addEventListener("change", () => {
+      loadPermissions();
+    });
+
+    searchInput?.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(loadPermissions, 250);
+    });
+
+    window.JH_PERM_reload = loadPermissions;
+  }
+
   if (permFormModalEl && window.JH_PERM_I18N) {
     const i18n = window.JH_PERM_I18N;
     const form = document.getElementById("permissionForm");
@@ -446,30 +949,39 @@
       submitBtn.textContent = i18n.saveCreate;
       description.value = "";
       route.value = "";
+      refreshCsrfTokens();
     };
 
     document.querySelectorAll("[data-bo-perm-create]").forEach((btn) => {
       btn.addEventListener("click", openCreate);
     });
 
-    document.querySelectorAll("[data-bo-perm-edit]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        form.action = i18n.updateUrl.replace("__ID__", btn.getAttribute("data-id"));
-        form.classList.remove("was-validated");
-        title.textContent = i18n.editTitle;
-        submitBtn.textContent = i18n.saveEdit;
-        description.value = btn.getAttribute("data-description") || "";
-        route.value = btn.getAttribute("data-route") || "";
-        formModal.show();
-      });
+    document.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-bo-perm-edit]");
+      if (!btn || !document.getElementById("permissions-table")?.contains(btn)) {
+        return;
+      }
+      form.action = i18n.updateUrl.replace("__ID__", btn.getAttribute("data-id"));
+      form.classList.remove("was-validated");
+      title.textContent = i18n.editTitle;
+      submitBtn.textContent = i18n.saveEdit;
+      description.value = btn.getAttribute("data-description") || "";
+      route.value = btn.getAttribute("data-route") || "";
+      refreshCsrfTokens();
+      formModal.show();
     });
 
-    form?.addEventListener("submit", (event) => {
+    form?.addEventListener("submit", async (event) => {
       if (!form.checkValidity()) {
         event.preventDefault();
         event.stopPropagation();
+        form.classList.add("was-validated");
+        return;
       }
       form.classList.add("was-validated");
+      event.preventDefault();
+      await refreshCsrfTokens();
+      form.submit();
     });
   }
 
@@ -481,18 +993,54 @@
     const confirmBtn = document.getElementById("permissionStatusModalConfirm");
     const modal = bootstrap.Modal.getOrCreateInstance(permStatusModalEl);
 
-    document.querySelectorAll("[data-bo-toggle-perm]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-id");
-        const label = btn.getAttribute("data-description") || "";
-        const activate = btn.getAttribute("data-activate") === "1";
-        form.action = i18n.toggleUrl.replace("__ID__", id);
-        title.textContent = activate ? i18n.activateTitle : i18n.deactivateTitle;
-        message.textContent = `${activate ? i18n.activateMessage : i18n.deactivateMessage}${label ? ` (${label})` : ""}`;
-        confirmBtn.textContent = activate ? i18n.activateBtn : i18n.deactivateBtn;
-        confirmBtn.className = `btn ${activate ? "btn-success" : "btn-danger"}`;
-        modal.show();
-      });
+    document.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-bo-toggle-perm]");
+      if (!btn || !document.getElementById("permissions-table")?.contains(btn)) {
+        return;
+      }
+      const id = btn.getAttribute("data-id");
+      const label = btn.getAttribute("data-description") || "";
+      const activate = btn.getAttribute("data-activate") === "1";
+      form.action = i18n.toggleUrl.replace("__ID__", id);
+      title.textContent = activate ? i18n.activateTitle : i18n.deactivateTitle;
+      message.textContent = `${activate ? i18n.activateMessage : i18n.deactivateMessage}${label ? ` (${label})` : ""}`;
+      confirmBtn.textContent = activate ? i18n.activateBtn : i18n.deactivateBtn;
+      confirmBtn.className = `btn ${activate ? "btn-success" : "btn-danger"}`;
+      modal.show();
+    });
+
+    form?.addEventListener("submit", async (event) => {
+      if (!window.JH_PERM_reload) {
+        return;
+      }
+      event.preventDefault();
+      const csrf = getCsrfToken();
+      const body = new FormData(form);
+      if (csrf) {
+        body.set(csrf.name, csrf.value);
+      }
+      try {
+        const response = await fetch(form.action, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body,
+          credentials: "same-origin",
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (payload.csrfName && payload.csrfHash) {
+          syncCsrfTokens(payload.csrfName, payload.csrfHash);
+        }
+        if (!response.ok || !payload.ok) {
+          return;
+        }
+        modal.hide();
+        await window.JH_PERM_reload();
+      } catch (_err) {
+        form.submit();
+      }
     });
   }
 
@@ -505,18 +1053,20 @@
     const confirmBtn = document.getElementById("profileStatusModalConfirm");
     const modal = bootstrap.Modal.getOrCreateInstance(profileStatusModalEl);
 
-    document.querySelectorAll("[data-bo-toggle-profile]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-id");
-        const name = btn.getAttribute("data-name") || "";
-        const activate = btn.getAttribute("data-activate") === "1";
-        form.action = i18n.toggleUrl.replace("__ID__", id);
-        title.textContent = activate ? i18n.activateTitle : i18n.deactivateTitle;
-        message.textContent = `${activate ? i18n.activateMessage : i18n.deactivateMessage}${name ? ` (${name})` : ""}`;
-        confirmBtn.textContent = activate ? i18n.activateBtn : i18n.deactivateBtn;
-        confirmBtn.className = `btn ${activate ? "btn-success" : "btn-danger"}`;
-        modal.show();
-      });
+    document.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-bo-toggle-profile]");
+      if (!btn) {
+        return;
+      }
+      const id = btn.getAttribute("data-id");
+      const name = btn.getAttribute("data-name") || "";
+      const activate = btn.getAttribute("data-activate") === "1";
+      form.action = i18n.toggleUrl.replace("__ID__", id);
+      title.textContent = activate ? i18n.activateTitle : i18n.deactivateTitle;
+      message.textContent = `${activate ? i18n.activateMessage : i18n.deactivateMessage}${name ? ` (${name})` : ""}`;
+      confirmBtn.textContent = activate ? i18n.activateBtn : i18n.deactivateBtn;
+      confirmBtn.className = `btn ${activate ? "btn-success" : "btn-danger"}`;
+      modal.show();
     });
   }
 
@@ -534,32 +1084,42 @@
   const permAssign = document.querySelector("[data-bo-perm-assign]");
   if (permAssign) {
     const searchInput = permAssign.querySelector("[data-perm-search]");
-    const selectAll = permAssign.querySelector("[data-perm-select-all]");
+    const selectAllBtn = permAssign.querySelector("[data-perm-select-all]");
+    const deselectAllBtn = permAssign.querySelector("[data-perm-deselect-all]");
     const countEl = permAssign.querySelector("[data-perm-selected-count]");
     const items = Array.from(permAssign.querySelectorAll("[data-perm-item]"));
+    const groups = Array.from(permAssign.querySelectorAll("[data-perm-group]"));
 
-    const visibleCheckboxes = () =>
-      items
-        .filter((item) => !item.classList.contains("is-hidden"))
-        .map((item) => item.querySelector("[data-perm-checkbox]"))
-        .filter(Boolean);
+    const itemCheckbox = (item) => item.querySelector("[data-perm-checkbox]");
+
+    const visibleItems = (scope = permAssign) =>
+      Array.from(scope.querySelectorAll("[data-perm-item]")).filter(
+        (item) => !item.classList.contains("is-hidden")
+      );
+
+    const visibleCheckboxes = (scope = permAssign) =>
+      visibleItems(scope)
+        .map((item) => itemCheckbox(item))
+        .filter((cb) => cb && !cb.disabled);
 
     const refreshSelectionUI = () => {
       items.forEach((item) => {
-        const checkbox = item.querySelector("[data-perm-checkbox]");
-        item.classList.toggle("is-selected", Boolean(checkbox?.checked));
+        const checkbox = itemCheckbox(item);
+        const label = item.querySelector(".bo-perm-item") || item;
+        label.classList.toggle("is-selected", Boolean(checkbox?.checked));
       });
 
-      const checkedCount = items.filter((item) => item.querySelector("[data-perm-checkbox]")?.checked).length;
+      const checkedCount = items.filter((item) => itemCheckbox(item)?.checked).length;
       if (countEl) {
         countEl.textContent = String(checkedCount);
       }
+    };
 
-      const visible = visibleCheckboxes();
-      if (selectAll) {
-        selectAll.checked = visible.length > 0 && visible.every((cb) => cb.checked);
-        selectAll.indeterminate = visible.some((cb) => cb.checked) && !selectAll.checked;
-      }
+    const setGroupVisibility = () => {
+      groups.forEach((group) => {
+        const visibleInGroup = visibleItems(group).length;
+        group.classList.toggle("is-hidden", visibleInGroup === 0);
+      });
     };
 
     searchInput?.addEventListener("input", () => {
@@ -568,43 +1128,57 @@
         const haystack = item.getAttribute("data-search") || "";
         item.classList.toggle("is-hidden", query !== "" && !haystack.includes(query));
       });
+      setGroupVisibility();
       refreshSelectionUI();
     });
 
-    selectAll?.addEventListener("change", () => {
+    selectAllBtn?.addEventListener("click", () => {
       visibleCheckboxes().forEach((checkbox) => {
-        checkbox.checked = selectAll.checked;
+        checkbox.checked = true;
       });
       refreshSelectionUI();
     });
 
-    permAssign.querySelectorAll("[data-perm-group-toggle]").forEach((btn) => {
+    deselectAllBtn?.addEventListener("click", () => {
+      visibleCheckboxes().forEach((checkbox) => {
+        checkbox.checked = false;
+      });
+      refreshSelectionUI();
+    });
+
+    permAssign.querySelectorAll("[data-perm-group-select]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const group = btn.closest("[data-perm-group]");
         if (!group) {
           return;
         }
-        const checkboxes = Array.from(group.querySelectorAll("[data-perm-item]:not(.is-hidden) [data-perm-checkbox]"));
-        const allChecked = checkboxes.length > 0 && checkboxes.every((cb) => cb.checked);
-        checkboxes.forEach((checkbox) => {
-          checkbox.checked = !allChecked;
+        visibleCheckboxes(group).forEach((checkbox) => {
+          checkbox.checked = true;
+        });
+        refreshSelectionUI();
+      });
+    });
+
+    permAssign.querySelectorAll("[data-perm-group-deselect]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const group = btn.closest("[data-perm-group]");
+        if (!group) {
+          return;
+        }
+        visibleCheckboxes(group).forEach((checkbox) => {
+          checkbox.checked = false;
         });
         refreshSelectionUI();
       });
     });
 
     items.forEach((item) => {
-      const checkbox = item.querySelector("[data-perm-checkbox]");
+      const checkbox = itemCheckbox(item);
       checkbox?.addEventListener("change", refreshSelectionUI);
     });
 
     refreshSelectionUI();
   }
-
-  bindTableSearch("cj-table-search", "cj-table");
-  bindTableSearch("cjc-table-search", "cjc-table");
-  bindTableSearch("jl-table-search", "jl-table");
-  bindTableSearch("jlc-table-search", "jlc-table");
 
   // Court jurisdiction list filters
   document.querySelectorAll("[data-bo-cj-filters], [data-bo-cjc-filters]").forEach((form) => {
@@ -615,6 +1189,7 @@
       if (!commune || !apiCommunes) {
         return;
       }
+      fillSelect(commune, [], commune.options[0]?.textContent || "");
       const options = province.value
         ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`)
         : [];
@@ -922,22 +1497,24 @@
     const apiCollines = peopleFilters.dataset.apiCollines || "";
 
     province?.addEventListener("change", async () => {
+      fillSelect(commune, [], commune?.options[0]?.textContent || "");
+      fillSelect(zone, [], zone?.options[0]?.textContent || "");
+      fillSelect(colline, [], colline?.options[0]?.textContent || "");
       fillSelect(
         commune,
         province.value ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`) : [],
         commune?.options[0]?.textContent || ""
       );
-      fillSelect(zone, [], zone?.options[0]?.textContent || "");
-      fillSelect(colline, [], colline?.options[0]?.textContent || "");
     });
 
     commune?.addEventListener("change", async () => {
+      fillSelect(zone, [], zone?.options[0]?.textContent || "");
+      fillSelect(colline, [], colline?.options[0]?.textContent || "");
       fillSelect(
         zone,
         commune.value ? await fetchOptions(`${apiZones}?commune_id=${encodeURIComponent(commune.value)}`) : [],
         zone?.options[0]?.textContent || ""
       );
-      fillSelect(colline, [], colline?.options[0]?.textContent || "");
     });
 
     zone?.addEventListener("change", async () => {
@@ -1047,6 +1624,82 @@
     });
   });
 
+  const openStageActionsModal = async (etapeId, titleSuffix) => {
+    const modalEl = document.getElementById("csActionsModal");
+    const i18n = window.JH_CS_I18N || {};
+    if (!modalEl || !i18n.actionsUrl) {
+      return;
+    }
+    const title = modalEl.querySelector(".modal-title");
+    const empty = document.getElementById("csActionsEmpty");
+    const table = document.getElementById("csActionsModalTable");
+    const tbody = table?.querySelector("tbody");
+    if (!tbody) {
+      return;
+    }
+    if (title) {
+      title.textContent = titleSuffix ? `${i18n.actionsTitle || "Actions"} — ${titleSuffix}` : (i18n.actionsTitle || "Actions");
+    }
+    if ($.fn.DataTable?.isDataTable(table)) {
+      $(table).DataTable().clear().destroy();
+    }
+    tbody.innerHTML = "";
+    empty?.classList.add("d-none");
+
+    try {
+      const response = await fetch(i18n.actionsUrl.replace("__ID__", String(etapeId)), {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      });
+      const data = await response.json();
+      const actions = data.actions || [];
+      if (!actions.length) {
+        empty?.classList.remove("d-none");
+      } else {
+        actions.forEach((action) => {
+          const tr = document.createElement("tr");
+          const toggleUrl = (i18n.actionToggleUrl || "")
+            .replace("__ETAPE__", String(etapeId))
+            .replace("__ID__", String(action.id));
+          const activate = action.is_active ? "0" : "1";
+          const label = action.is_active ? (i18n.actionDeactivate || "Deactivate") : (i18n.actionActivate || "Activate");
+          const icon = action.is_active ? "bi-toggle-off" : "bi-toggle-on";
+          const danger = action.is_active ? "is-danger" : "is-success";
+          tr.innerHTML = `
+            <td>${action.description || ""}</td>
+            <td><span class="bo-status-pill ${action.is_active ? "is-active" : "is-inactive"}">${action.status || ""}</span></td>
+            <td>
+              <form method="post" action="${toggleUrl}">
+                <input type="hidden" name="${i18n.csrfName || ""}" value="${i18n.csrfHash || ""}">
+                <button class="btn btn-bo-icon ${danger}" type="submit" title="${label}">
+                  <i class="bi ${icon}"></i>
+                </button>
+              </form>
+            </td>`;
+          tbody.appendChild(tr);
+        });
+      }
+    } catch (_err) {
+      empty?.classList.remove("d-none");
+    }
+
+    if (table && !$.fn.DataTable?.isDataTable(table)) {
+      const dt = initDataTable(table);
+      const searchInput = document.getElementById("cs-actions-modal-search");
+      if (dt && searchInput) {
+        searchInput.value = "";
+        searchInput.oninput = () => dt.search(searchInput.value).draw();
+      }
+    }
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  };
+
+  document.querySelectorAll("[data-bo-cs-actions]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openStageActionsModal(btn.getAttribute("data-id"), btn.getAttribute("data-name") || "");
+    });
+  });
+
   const bindSimpleCrudModal = (formId, modalId, createSelector, editSelector, i18n, fillFn) => {
     const form = document.getElementById(formId);
     const modalEl = document.getElementById(modalId);
@@ -1146,10 +1799,12 @@
     const submitBtn = document.getElementById("cscFormSubmit");
     const niveauActuel = document.getElementById("niveau_juridiction_actuel_id");
     const etapeActuel = document.getElementById("etape_plainte_actuel_id");
+    const actionSelect = document.getElementById("etape_plainte_action_id");
     const niveauSuivant = document.getElementById("niveau_juridiction_suivant_id");
     const etapeSuivant = document.getElementById("etape_plainte_suivant_id");
     const urlRoute = document.getElementById("url_route");
     const apiStages = cscForm.dataset.apiStages || i18n.stagesUrl || "";
+    const apiActions = cscForm.dataset.apiActions || i18n.actionsUrl || "";
 
     const loadStages = async (niveauEl, etapeEl, selected) => {
       const options = niveauEl?.value
@@ -1159,7 +1814,24 @@
       if (selected) etapeEl.value = String(selected);
     };
 
-    niveauActuel?.addEventListener("change", () => loadStages(niveauActuel, etapeActuel));
+    const loadActions = async (selected, includeId) => {
+      if (!actionSelect) return;
+      const etapeId = etapeActuel?.value || "";
+      const params = new URLSearchParams();
+      if (etapeId) params.set("etape_plainte_id", etapeId);
+      if (includeId) params.set("include_id", String(includeId));
+      const options = etapeId && apiActions
+        ? await fetchOptions(`${apiActions}?${params.toString()}`)
+        : [];
+      fillSelect(actionSelect, options, actionSelect.options[0]?.textContent || "");
+      if (selected) actionSelect.value = String(selected);
+    };
+
+    niveauActuel?.addEventListener("change", async () => {
+      await loadStages(niveauActuel, etapeActuel);
+      await loadActions();
+    });
+    etapeActuel?.addEventListener("change", () => loadActions());
     niveauSuivant?.addEventListener("change", () => loadStages(niveauSuivant, etapeSuivant));
 
     document.querySelectorAll("[data-bo-csc-create]").forEach((btn) => {
@@ -1169,6 +1841,7 @@
         cscForm.classList.remove("was-validated");
         fillSelect(etapeActuel, [], etapeActuel?.options[0]?.textContent || "");
         fillSelect(etapeSuivant, [], etapeSuivant?.options[0]?.textContent || "");
+        fillSelect(actionSelect, [], actionSelect?.options[0]?.textContent || "");
         if (title) title.textContent = i18n.createTitle;
         if (submitBtn) submitBtn.textContent = i18n.saveCreate;
         modal.show();
@@ -1185,6 +1858,7 @@
         if (niveauSuivant) niveauSuivant.value = btn.getAttribute("data-niveau-suivant") || "";
         if (urlRoute) urlRoute.value = btn.getAttribute("data-url-route") || btn.getAttribute("data-route") || "";
         await loadStages(niveauActuel, etapeActuel, btn.getAttribute("data-etape-actuel"));
+        await loadActions(btn.getAttribute("data-action-id"), btn.getAttribute("data-action-id"));
         await loadStages(niveauSuivant, etapeSuivant, btn.getAttribute("data-etape-suivant"));
         modal.show();
       });
@@ -1219,6 +1893,10 @@
     };
 
     province?.addEventListener("change", async () => {
+      fillSelect(commune, [], commune?.options[0]?.textContent || "");
+      if (juridiction) {
+        fillSelect(juridiction, [], juridiction.options[0]?.textContent || "");
+      }
       fillSelect(commune, province.value ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`) : [], commune?.options[0]?.textContent || "");
       await refreshCourts();
     });
@@ -1265,6 +1943,10 @@
     };
 
     province?.addEventListener("change", async () => {
+      fillSelect(commune, [], commune?.options[0]?.textContent || "");
+      if (juridiction) {
+        fillSelect(juridiction, [], juridiction.options[0]?.textContent || "");
+      }
       fillSelect(commune, province.value ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`) : [], commune?.options[0]?.textContent || "");
       await refreshCourts();
     });
@@ -1344,6 +2026,10 @@
     };
 
     province?.addEventListener("change", async () => {
+      fillSelect(commune, [], commune?.options[0]?.textContent || "");
+      if (juridiction) {
+        fillSelect(juridiction, [], juridiction.options[0]?.textContent || "");
+      }
       fillSelect(commune, province.value ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`) : [], commune?.options[0]?.textContent || "");
       await refreshCourts();
     });
@@ -1421,6 +2107,10 @@
     });
 
     province?.addEventListener("change", async () => {
+      fillSelect(commune, [], commune?.options[0]?.textContent || "");
+      if (juridiction) {
+        fillSelect(juridiction, [], juridiction.options[0]?.textContent || "");
+      }
       fillSelect(commune, province.value ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`) : [], commune?.options[0]?.textContent || "");
       await refreshCourts();
     });
@@ -1501,6 +2191,10 @@
     };
 
     province?.addEventListener("change", async () => {
+      fillSelect(commune, [], commune?.options[0]?.textContent || "");
+      if (juridiction) {
+        fillSelect(juridiction, [], juridiction.options[0]?.textContent || "");
+      }
       fillSelect(commune, province.value ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`) : [], commune?.options[0]?.textContent || "");
       await refreshCourts();
     });
@@ -1597,6 +2291,10 @@
     };
 
     province?.addEventListener("change", async () => {
+      fillSelect(commune, [], commune?.options[0]?.textContent || "");
+      if (juridiction) {
+        fillSelect(juridiction, [], juridiction.options[0]?.textContent || "");
+      }
       fillSelect(commune, province.value ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`) : [], commune?.options[0]?.textContent || "");
       await refreshCourts();
     });
@@ -1721,6 +2419,10 @@
     };
 
     province?.addEventListener("change", async () => {
+      fillSelect(commune, [], commune?.options[0]?.textContent || "");
+      if (juridiction) {
+        fillSelect(juridiction, [], juridiction.options[0]?.textContent || "");
+      }
       fillSelect(commune, province.value ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`) : [], commune?.options[0]?.textContent || "");
       await refreshCourts();
     });
@@ -1811,4 +2513,518 @@
       vrdForm.classList.add("was-validated");
     });
   }
+
+  // ---- Case file transfers ----
+  const bindCourtCascade = (root, prefix, apiCommunes, apiJurisdictions) => {
+    const province = root.querySelector(`[data-filter="${prefix}-province"]`);
+    const commune = root.querySelector(`[data-filter="${prefix}-commune"]`);
+    const niveau = root.querySelector(`[data-filter="${prefix}-niveau"]`);
+    const juridiction = root.querySelector(`[data-filter="${prefix}-juridiction"]`);
+
+    const refreshCourts = async () => {
+      if (!juridiction || !apiJurisdictions) {
+        return;
+      }
+      const params = new URLSearchParams();
+      if (province?.value) params.set("province_id", province.value);
+      if (commune?.value) params.set("commune_id", commune.value);
+      if (niveau?.value) params.set("niveau_juridiction_id", niveau.value);
+      const qs = params.toString();
+      const options = await fetchOptions(`${apiJurisdictions}${qs ? `?${qs}` : ""}`);
+      fillSelect(juridiction, options, juridiction.options[0]?.textContent || "");
+    };
+
+    province?.addEventListener("change", async () => {
+      if (commune && apiCommunes) {
+        fillSelect(commune, [], commune.options[0]?.textContent || "");
+        if (juridiction) {
+          fillSelect(juridiction, [], juridiction.options[0]?.textContent || "");
+        }
+        const options = province.value
+          ? await fetchOptions(`${apiCommunes}?province_id=${encodeURIComponent(province.value)}`)
+          : [];
+        fillSelect(commune, options, commune.options[0]?.textContent || "");
+      } else if (juridiction) {
+        fillSelect(juridiction, [], juridiction.options[0]?.textContent || "");
+      }
+      await refreshCourts();
+    });
+    commune?.addEventListener("change", refreshCourts);
+    niveau?.addEventListener("change", refreshCourts);
+
+    return { province, commune, niveau, juridiction, refreshCourts };
+  };
+
+  document.querySelectorAll("[data-bo-trf-filters]").forEach((form) => {
+    const apiCommunes = form.dataset.apiCommunes || "";
+    const apiJurisdictions = form.dataset.apiJurisdictions || "";
+    bindCourtCascade(form, "src", apiCommunes, apiJurisdictions);
+    bindCourtCascade(form, "dst", apiCommunes, apiJurisdictions);
+  });
+
+  const trfCreate = document.querySelector("[data-bo-trf-create]");
+  if (trfCreate) {
+    const apiCommunes = trfCreate.dataset.apiCommunes || "";
+    const apiJurisdictions = trfCreate.dataset.apiJurisdictions || "";
+    const apiComplaints = trfCreate.dataset.apiComplaints || "";
+    const apiDestinations = trfCreate.dataset.apiDestinations || "";
+    const src = bindCourtCascade(trfCreate, "src", apiCommunes, apiJurisdictions);
+    const dst = bindCourtCascade(trfCreate, "dst", apiCommunes, apiJurisdictions);
+    const complaint = trfCreate.querySelector("#plainte_id");
+
+    const refreshComplaints = async () => {
+      if (!complaint || !apiComplaints) return;
+      const courtId = src.juridiction?.value || "";
+      const options = courtId
+        ? await fetchOptions(`${apiComplaints}?juridiction_id=${encodeURIComponent(courtId)}`)
+        : [];
+      fillSelect(complaint, options, complaint.options[0]?.textContent || "");
+    };
+
+    const refreshDestinations = async () => {
+      if (!apiDestinations || !src.juridiction) return;
+      const courtId = src.juridiction.value || "";
+      if (!courtId) {
+        if (dst.niveau) dst.niveau.value = "";
+        fillSelect(dst.juridiction, [], dst.juridiction?.options[0]?.textContent || "");
+        return;
+      }
+      const params = new URLSearchParams({ juridiction_source_id: courtId });
+      if (dst.province?.value) params.set("province_id", dst.province.value);
+      if (dst.commune?.value) params.set("commune_id", dst.commune.value);
+      const response = await fetch(`${apiDestinations}?${params.toString()}`, {
+        headers: { Accept: "application/json" },
+      });
+      const data = await response.json();
+      if (dst.niveau && data.next_niveau_id) {
+        dst.niveau.value = String(data.next_niveau_id);
+      }
+      fillSelect(dst.juridiction, data.options || [], dst.juridiction?.options[0]?.textContent || "");
+    };
+
+    src.juridiction?.addEventListener("change", async () => {
+      await refreshComplaints();
+      await refreshDestinations();
+    });
+    dst.province?.addEventListener("change", refreshDestinations);
+    dst.commune?.addEventListener("change", refreshDestinations);
+
+    trfCreate.addEventListener("submit", (event) => {
+      if (!trfCreate.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      trfCreate.classList.add("was-validated");
+    });
+  }
+
+  // ---- Confirm before save/update (all Add & Edit forms) ----
+  (() => {
+    const i18n = window.JH_CONFIRM_I18N || {};
+    const modalEl = document.getElementById("boConfirmSaveModal");
+    if (!modalEl || typeof bootstrap === "undefined") {
+      return;
+    }
+
+    const titleEl = document.getElementById("boConfirmSaveModalTitle");
+    const leadEl = document.getElementById("boConfirmSaveModalLead");
+    const bodyEl = document.getElementById("boConfirmSaveModalBody");
+    const submitBtn = document.getElementById("boConfirmSaveSubmit");
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    let pendingForm = null;
+    const previewUrls = [];
+
+    const escapeHtml = (value) => String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+    const revokePreviews = () => {
+      while (previewUrls.length) {
+        URL.revokeObjectURL(previewUrls.pop());
+      }
+    };
+
+    const isUpdateForm = (form) => {
+      if ((form.dataset.boConfirmMode || "").toLowerCase() === "update") {
+        return true;
+      }
+      if ((form.dataset.boConfirmMode || "").toLowerCase() === "create") {
+        return false;
+      }
+      const action = String(form.getAttribute("action") || window.location.pathname || "");
+      if (/\/edit(\/|$)/i.test(action) || /\/update(\/|$)/i.test(action)) {
+        return true;
+      }
+      // POST /resource/123 style updates
+      if (/\/\d+(\/)?$/.test(action.replace(/\/+$/, ""))) {
+        return true;
+      }
+      const submit = form.querySelector('[data-wizard-submit], button[type="submit"]');
+      const text = (submit?.textContent || "").toLowerCase();
+      return /update|edit|save changes|mettre à jour|enregistrer les modifications/.test(text);
+    };
+
+    const shouldSkipForm = (form) => {
+      if (!form || form.method?.toLowerCase() === "get") {
+        return true;
+      }
+      if (form.classList.contains("bo-filters") || form.hasAttribute("data-bo-skip-confirm")) {
+        return true;
+      }
+      const id = form.id || "";
+      if (/StatusForm$/i.test(id) || /status-form$/i.test(id)) {
+        return true;
+      }
+      return false;
+    };
+
+    const shouldBindForm = (form) => {
+      if (shouldSkipForm(form)) {
+        return false;
+      }
+      if (form.classList.contains("bo-form") || form.hasAttribute("data-bo-confirm-save")) {
+        return true;
+      }
+      // Modal create/edit forms
+      if (form.classList.contains("needs-validation") && form.closest(".modal")) {
+        return true;
+      }
+      return false;
+    };
+
+    const cleanLabel = (text) => String(text || "")
+      .replace(/\*/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const fieldLabel = (field) => {
+      if (field.id) {
+        const byFor = document.querySelector(`label[for="${CSS.escape(field.id)}"]`);
+        if (byFor) {
+          return cleanLabel(byFor.textContent);
+        }
+      }
+      const wrapLabel = field.closest("label");
+      if (wrapLabel) {
+        const clone = wrapLabel.cloneNode(true);
+        clone.querySelectorAll("input, select, textarea, .form-text, .invalid-feedback, code").forEach((n) => n.remove());
+        const text = cleanLabel(clone.textContent);
+        if (text) {
+          return text;
+        }
+      }
+      const group = field.closest(".mb-3, .col-12, [class*='col-']");
+      const nearby = group?.querySelector(".form-label, legend, h2, h3, h6");
+      if (nearby) {
+        return cleanLabel(nearby.textContent);
+      }
+      return cleanLabel(field.getAttribute("aria-label") || field.name || field.id || "Field");
+    };
+
+    const sectionTitleFor = (field) => {
+      const fieldset = field.closest("fieldset");
+      const legend = fieldset?.querySelector("legend");
+      if (legend) {
+        return cleanLabel(legend.textContent) || (i18n.sectionDetails || "Details");
+      }
+
+      let node = field.closest(".col-12, .mb-3, .row, .bo-form-section, .bo-perm-assign") || field.parentElement;
+      while (node && node !== field.form) {
+        let prev = node.previousElementSibling;
+        while (prev) {
+          if (
+            prev.matches?.("h2, h3, h6, .bo-form-section-title, legend")
+            || prev.querySelector?.(".bo-form-section-title, h2, h3, h6")
+          ) {
+            const titleEl = prev.matches?.("h2, h3, h6, .bo-form-section-title, legend")
+              ? prev
+              : prev.querySelector(".bo-form-section-title, h2, h3, h6");
+            const title = cleanLabel(titleEl?.textContent || "");
+            if (title) {
+              return title;
+            }
+          }
+          prev = prev.previousElementSibling;
+        }
+        node = node.parentElement;
+      }
+      return i18n.sectionDetails || "Details";
+    };
+
+    const formatBytes = (size) => {
+      if (!Number.isFinite(size) || size < 0) {
+        return "";
+      }
+      if (size < 1024) {
+        return `${size} B`;
+      }
+      if (size < 1024 * 1024) {
+        return `${(size / 1024).toFixed(1)} KB`;
+      }
+      return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    const collectSections = (form) => {
+      const sections = new Map();
+      const ensure = (title) => {
+        if (!sections.has(title)) {
+          sections.set(title, []);
+        }
+        return sections.get(title);
+      };
+
+      const processedCheckboxNames = new Set();
+      const fields = Array.from(form.querySelectorAll("input, select, textarea"));
+
+      fields.forEach((field) => {
+        if (field.disabled || field.type === "hidden" || field.type === "submit" || field.type === "button" || field.type === "reset") {
+          return;
+        }
+        if (field.matches("[data-perm-search], [data-wizard-prev], [data-wizard-next]")) {
+          return;
+        }
+        if (field.name && /csrf/i.test(field.name)) {
+          return;
+        }
+
+        const section = sectionTitleFor(field);
+        const label = fieldLabel(field);
+
+        if (field.type === "checkbox") {
+          const name = field.name || field.id || label;
+          if (processedCheckboxNames.has(name)) {
+            return;
+          }
+          processedCheckboxNames.add(name);
+          const group = name
+            ? Array.from(form.querySelectorAll(`input[type="checkbox"][name="${CSS.escape(name)}"]`))
+            : [field];
+          const checked = group.filter((el) => el.checked);
+          if (!checked.length && group.length > 1) {
+            ensure(section).push({
+              label: label || (i18n.sectionDetails || "Details"),
+              valueHtml: escapeHtml(i18n.emptyValue || "—"),
+              wide: true,
+            });
+            return;
+          }
+          if (group.length === 1) {
+            ensure(section).push({
+              label,
+              valueHtml: escapeHtml(field.checked ? (field.value || "Yes") : (i18n.emptyValue || "—")),
+            });
+            return;
+          }
+          const chips = checked.map((el) => {
+            const item = el.closest("[data-perm-item], .form-check, label");
+            const text = cleanLabel(
+              item?.querySelector(".bo-perm-item-title, .form-check-label, span:not(.visually-hidden)")?.textContent
+              || el.value
+              || fieldLabel(el)
+            );
+            return `<span class="bo-confirm-chip">${escapeHtml(text)}</span>`;
+          }).join("");
+          const countTpl = i18n.checkedCount || "{0} selected";
+          ensure(section).push({
+            label,
+            valueHtml: `<div class="bo-confirm-chips">${chips}</div><div class="small text-muted mt-1">${escapeHtml(countTpl.replace("{0}", String(checked.length)))}</div>`,
+            wide: true,
+          });
+          return;
+        }
+
+        if (field.type === "radio") {
+          if (!field.checked) {
+            return;
+          }
+          const text = field.labels?.[0] ? cleanLabel(field.labels[0].textContent) : field.value;
+          ensure(section).push({ label, valueHtml: escapeHtml(text || field.value || (i18n.emptyValue || "—")) });
+          return;
+        }
+
+        if (field.type === "file") {
+          const files = Array.from(field.files || []);
+          if (!files.length) {
+            ensure(section).push({
+              label,
+              valueHtml: escapeHtml(i18n.noFile || "No file selected"),
+              wide: true,
+            });
+            return;
+          }
+          const cards = files.map((file) => {
+            const isImage = /^image\//i.test(file.type);
+            let preview = `<span class="bo-confirm-file-icon"><i class="bi bi-file-earmark" aria-hidden="true"></i></span>`;
+            if (isImage) {
+              const url = URL.createObjectURL(file);
+              previewUrls.push(url);
+              preview = `<img class="bo-confirm-file-preview" src="${url}" alt="">`;
+            } else if (/pdf/i.test(file.type) || /\.pdf$/i.test(file.name)) {
+              preview = `<span class="bo-confirm-file-icon"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i></span>`;
+            }
+            return `<div class="bo-confirm-file">${preview}<div class="bo-confirm-file-meta"><strong>${escapeHtml(file.name)}</strong><span>${escapeHtml(formatBytes(file.size))}</span></div></div>`;
+          }).join("");
+          ensure(section).push({
+            label,
+            valueHtml: `<div class="bo-confirm-files">${cards}</div>`,
+            wide: true,
+          });
+          return;
+        }
+
+        if (field.tagName === "SELECT") {
+          const selected = Array.from(field.selectedOptions || []).map((opt) => cleanLabel(opt.textContent)).filter(Boolean);
+          ensure(section).push({
+            label,
+            valueHtml: escapeHtml(selected.join(", ") || (i18n.emptyValue || "—")),
+            wide: selected.length > 2,
+          });
+          return;
+        }
+
+        const value = String(field.value || "").trim();
+        ensure(section).push({
+          label,
+          valueHtml: escapeHtml(value || (i18n.emptyValue || "—")),
+          wide: field.tagName === "TEXTAREA" || value.length > 80,
+        });
+      });
+
+      return sections;
+    };
+
+    const renderReview = (form) => {
+      revokePreviews();
+      const sections = collectSections(form);
+      const html = [];
+      sections.forEach((items, title) => {
+        if (!items.length) {
+          return;
+        }
+        const rows = items.map((item) => `
+          <div class="${item.wide ? "is-wide" : ""}">
+            <dt>${escapeHtml(item.label)}</dt>
+            <dd>${item.valueHtml}</dd>
+          </div>
+        `).join("");
+        html.push(`
+          <section class="bo-confirm-section">
+            <h3>${escapeHtml(title)}</h3>
+            <dl class="bo-confirm-list">${rows}</dl>
+          </section>
+        `);
+      });
+      bodyEl.innerHTML = html.length
+        ? `<div class="bo-confirm-sections">${html.join("")}</div>`
+        : `<p class="mb-0">${escapeHtml(i18n.emptyValue || "—")}</p>`;
+    };
+
+    const openConfirm = (form) => {
+      pendingForm = form;
+      const updating = isUpdateForm(form);
+      titleEl.textContent = updating ? (i18n.updateTitle || "Confirm and update") : (i18n.saveTitle || "Confirm and save");
+      leadEl.textContent = updating ? (i18n.updateLead || "") : (i18n.saveLead || "");
+      submitBtn.textContent = updating ? (i18n.confirmUpdate || "Confirm and Update") : (i18n.confirmSave || "Confirm and Save");
+      renderReview(form);
+      modal.show();
+    };
+
+    submitBtn?.addEventListener("click", () => {
+      if (!pendingForm) {
+        return;
+      }
+      const form = pendingForm;
+      pendingForm = null;
+      form.dataset.boConfirmOk = "1";
+      modal.hide();
+      if (typeof form.requestSubmit === "function") {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    });
+
+    modalEl.addEventListener("hidden.bs.modal", () => {
+      revokePreviews();
+      pendingForm = null;
+    });
+
+    const bindForm = (form) => {
+      if (!shouldBindForm(form) || form.dataset.boConfirmBound === "1") {
+        return;
+      }
+      form.dataset.boConfirmBound = "1";
+      form.addEventListener("submit", (event) => {
+        if (form.dataset.boConfirmOk === "1") {
+          delete form.dataset.boConfirmOk;
+          return;
+        }
+        if (event.defaultPrevented) {
+          return;
+        }
+
+        // Client-side required validation before opening confirm.
+        const invalid = Array.from(form.querySelectorAll("input, select, textarea")).find((el) => {
+          if (el.disabled || el.type === "hidden" || el.type === "submit" || el.type === "button") {
+            return false;
+          }
+          return typeof el.checkValidity === "function" && !el.checkValidity();
+        });
+        if (invalid) {
+          event.preventDefault();
+          event.stopPropagation();
+          form.classList.add("was-validated");
+          // Reveal wizard step containing the invalid field.
+          const pane = invalid.closest("[data-wizard-step]");
+          if (pane && pane.hidden) {
+            const step = Number(pane.dataset.wizardStep || 0);
+            const indicator = form.querySelector(`[data-wizard-indicator="${step}"]`);
+            form.querySelectorAll("[data-wizard-step]").forEach((p) => {
+              const active = p === pane;
+              p.hidden = !active;
+              p.classList.toggle("is-active", active);
+            });
+            form.querySelectorAll("[data-wizard-indicator]").forEach((ind) => {
+              const idx = Number(ind.dataset.wizardIndicator);
+              ind.classList.toggle("is-active", idx === step);
+              ind.classList.toggle("is-complete", idx < step);
+            });
+            const prevBtn = form.querySelector("[data-wizard-prev]");
+            const nextBtn = form.querySelector("[data-wizard-next]");
+            const submitWizard = form.querySelector("[data-wizard-submit]");
+            if (prevBtn) prevBtn.hidden = step <= 1;
+            if (nextBtn) nextBtn.hidden = true;
+            if (submitWizard) submitWizard.hidden = false;
+          }
+          invalid.focus?.();
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        openConfirm(form);
+      });
+    };
+
+    document.querySelectorAll("form").forEach(bindForm);
+
+    // Forms injected later (rare) — observe panel content swaps.
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof HTMLElement)) {
+            return;
+          }
+          if (node.matches?.("form")) {
+            bindForm(node);
+          }
+          node.querySelectorAll?.("form").forEach(bindForm);
+        });
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  })();
 })();

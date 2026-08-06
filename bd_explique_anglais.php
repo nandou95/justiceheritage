@@ -6,7 +6,7 @@ A. Schema: administration
 
 1. Users Management : The administration.utilisateur table stores all Back Office user accounts.
 
-SELECT utilisateur_id, nom_utilisateur, prenom_utilisateur, numero_cni, numero_matricule, telephone, email, date_naissance, profil_id, statut_compte_id, juridiction_id, sexe_id, province_naissance_id, commune_naissance_id, zone_naissance_id, colline_naissance_id, user_name, mot_de_passe_hash, derniere_connexion, created_at, updated_at, code_authentification FROM administration.utilisateur;
+SELECT utilisateur_id, nom_utilisateur, prenom_utilisateur, numero_cni, numero_matricule, telephone, email, date_naissance, profil_id, statut_compte_id, juridiction_id, sexe_id, province_naissance_id, commune_naissance_id, zone_naissance_id, colline_naissance_id, mot_de_passe_hash, derniere_connexion, created_at, updated_at, code_authentification FROM administration.utilisateur;
 
 This table manages:User accounts,Personal information,Authentication credentials,Assigned profile (role),Assigned court jurisdiction,Account status,Two-Factor Authentication (2FA),Audit timestamps
 

@@ -113,9 +113,6 @@
                 <label class="form-label" for="filter_date_to"><?= esc(lang('Backoffice.ntf_filter_date_to')) ?></label>
                 <input class="form-control" type="date" id="filter_date_to" name="date_to" value="<?= esc((string) ($filters['date_to'] ?? ''), 'attr') ?>">
             </div>
-            <div class="col-12 col-md-6 col-xl-2 d-flex align-items-end">
-                <button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button>
-            </div>
         </div>
     </form>
 
@@ -155,15 +152,19 @@
                         <td><?= esc($row['read_at']) ?></td>
                         <td>
                             <div class="bo-row-actions">
+                                <?php if (can_access('backoffice/notifications/users/show')): ?>
                                 <a class="btn btn-bo-icon" href="<?= site_url('backoffice/notifications/users/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.ntf_action_view'), 'attr') ?>">
                                     <i class="bi bi-eye" aria-hidden="true"></i>
                                 </a>
+                                <?php endif; ?>
+                                <?php if (can_access('backoffice/notifications/users/resend')): ?>
                                 <form method="post" action="<?= site_url('backoffice/notifications/users/' . $row['id'] . '/resend') ?>" class="d-inline" onsubmit="return confirm('<?= esc(lang('Backoffice.ntf_resend_confirm'), 'js') ?>');">
                                     <?= csrf_field() ?>
                                     <button type="submit" class="btn btn-bo-icon" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.ntf_action_resend'), 'attr') ?>">
                                         <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
                                     </button>
                                 </form>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>

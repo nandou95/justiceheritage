@@ -8,9 +8,11 @@
         <h1><?= esc(lang('Backoffice.hrg_title')) ?></h1>
         <p><?= esc(lang('Backoffice.hrg_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/hearings/create')): ?>
     <a class="btn btn-bo-primary" href="<?= site_url('backoffice/hearings/create') ?>">
         <i class="bi bi-plus-lg"></i> <?= esc(lang('Backoffice.hrg_new')) ?>
     </a>
+    <?php endif; ?>
 </section>
 
 <section class="bo-panel bo-crud-panel">
@@ -67,9 +69,6 @@
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-12 col-md-6 col-xl-1 d-flex align-items-end">
-                <button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button>
-            </div>
         </div>
     </form>
 
@@ -110,9 +109,15 @@
                     <td><?= esc($row['status']) ?></td>
                     <td>
                         <div class="bo-action-group">
+                            <?php if (can_access('backoffice/hearings/show')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/hearings/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.hrg_action_view'), 'attr') ?>"><i class="bi bi-card-heading"></i></a>
+                            <?php endif; ?>
+                            <?php if (can_access('backoffice/hearings/assign')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/hearings/' . $row['id'] . '/assignments') ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.hrg_action_assign'), 'attr') ?>"><i class="bi bi-people"></i></a>
+                            <?php endif; ?>
+                            <?php if (can_access('backoffice/hearings/process')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/hearings/' . $row['id'] . '/process') ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.hrg_action_process'), 'attr') ?>"><i class="bi bi-clipboard-check"></i></a>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>

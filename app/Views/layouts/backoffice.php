@@ -11,11 +11,20 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="<?= public_asset('assets/vendor/datatables/dataTables.bootstrap5.min.css') ?>">
     <link rel="stylesheet" href="<?= public_asset('assets/css/backoffice.css') ?>">
+    <?= $this->renderSection('styles') ?>
 </head>
 <body class="bo-body">
     <?php
     $locale = service('request')->getLocale();
-    $user   = $user ?? ['name' => 'Officer', 'role' => 'Staff'];
+    $sessionUser = session('backoffice_user');
+    if (is_array($sessionUser) && ! empty($sessionUser['name'])) {
+        $user = [
+            'name' => (string) $sessionUser['name'],
+            'role' => (string) ($sessionUser['email'] ?? ($user['role'] ?? 'Staff')),
+        ];
+    } else {
+        $user = $user ?? ['name' => 'Officer', 'role' => 'Staff'];
+    }
     $active = $active ?? 'dashboard';
     $icon = static function (string $name): string {
         $map = [
@@ -76,7 +85,7 @@
             <?= view('partials/backoffice_nav', ['active' => $active, 'icon' => $icon]) ?>
 
             <div class="bo-sidebar-foot">
-                <a class="bo-logout" href="<?= site_url('logout') ?>">
+                <a class="bo-logout" href="<?= site_url('backoffice/logout') ?>">
                     <span class="bo-ico"><?= $icon('logout') ?></span>
                     <?= esc(lang('Backoffice.logout')) ?>
                 </a>
@@ -126,6 +135,27 @@
         </div>
     </div>
 
+    <div class="modal fade" id="boConfirmSaveModal" tabindex="-1" aria-labelledby="boConfirmSaveModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content bo-confirm-modal">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title fs-5" id="boConfirmSaveModalTitle"></h2>
+                        <p class="bo-confirm-lead mb-0" id="boConfirmSaveModalLead"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= esc(lang('Backoffice.btn_cancel'), 'attr') ?>"></button>
+                </div>
+                <div class="modal-body" id="boConfirmSaveModalBody"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="boConfirmSaveBack">
+                        <?= esc(lang('Backoffice.confirm_back_edit')) ?>
+                    </button>
+                    <button type="button" class="btn btn-bo-primary" id="boConfirmSaveSubmit"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         window.JH_DT = {
             language: {
@@ -144,11 +174,26 @@
                 }
             }
         };
+        window.JH_CONFIRM_I18N = {
+            saveTitle: <?= json_encode(lang('Backoffice.confirm_save_title')) ?>,
+            updateTitle: <?= json_encode(lang('Backoffice.confirm_update_title')) ?>,
+            saveLead: <?= json_encode(lang('Backoffice.confirm_save_lead')) ?>,
+            updateLead: <?= json_encode(lang('Backoffice.confirm_update_lead')) ?>,
+            backEdit: <?= json_encode(lang('Backoffice.confirm_back_edit')) ?>,
+            confirmSave: <?= json_encode(lang('Backoffice.confirm_and_save')) ?>,
+            confirmUpdate: <?= json_encode(lang('Backoffice.confirm_and_update')) ?>,
+            sectionDetails: <?= json_encode(lang('Backoffice.confirm_section_details')) ?>,
+            emptyValue: <?= json_encode(lang('Backoffice.confirm_empty_value')) ?>,
+            filesLabel: <?= json_encode(lang('Backoffice.confirm_files_label')) ?>,
+            noFile: <?= json_encode(lang('Backoffice.confirm_no_file')) ?>,
+            checkedCount: <?= json_encode(lang('Backoffice.confirm_checked_count')) ?>
+        };
     </script>
     <script src="<?= public_asset('assets/vendor/jquery/jquery.min.js') ?>"></script>
     <script src="<?= public_asset('assets/vendor/bootstrap/bootstrap.bundle.min.js') ?>"></script>
     <script src="<?= public_asset('assets/vendor/datatables/dataTables.min.js') ?>"></script>
     <script src="<?= public_asset('assets/vendor/datatables/dataTables.bootstrap5.min.js') ?>"></script>
     <script src="<?= public_asset('assets/js/backoffice.js') ?>"></script>
+    <?= $this->renderSection('scripts') ?>
 </body>
 </html>

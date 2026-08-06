@@ -160,7 +160,7 @@ class BackofficeVerdictService
 
         $out = [];
         foreach ($this->safe(fn () => $this->assignments->listByAudience($audienceId)) as $row) {
-            if (! filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            if (! db_bool($row['is_active'] ?? false)) {
                 continue;
             }
             $hay = mb_strtolower(($row['code_profil'] ?? '') . ' ' . ($row['libelle_profil'] ?? ''));

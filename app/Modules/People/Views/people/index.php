@@ -10,10 +10,12 @@
         <h1><?= esc(lang('Backoffice.people_title')) ?></h1>
         <p><?= esc(lang('Backoffice.people_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/people/create')): ?>
     <a class="btn btn-bo-primary" href="<?= site_url('backoffice/people/create') ?>">
         <i class="bi bi-plus-lg" aria-hidden="true"></i>
         <?= esc(lang('Backoffice.people_new')) ?>
     </a>
+    <?php endif; ?>
 </section>
 
 <section class="bo-panel bo-crud-panel">
@@ -81,9 +83,6 @@
                 <label class="form-label" for="filter_dob"><?= esc(lang('Backoffice.filter_date_of_birth')) ?></label>
                 <input class="form-control" type="date" id="filter_dob" name="date_naissance" value="<?= esc($filters['date_naissance'] ?? '') ?>">
             </div>
-            <div class="col-12 col-md-6 col-xl-1 d-flex align-items-end">
-                <button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button>
-            </div>
         </div>
     </form>
 
@@ -115,7 +114,7 @@
                         <td><?= esc($row['gender']) ?></td>
                         <td><?= esc($row['numero_cni']) ?></td>
                         <td>
-                            <?php if ($row['has_cni_file']): ?>
+                            <?php if ($row['has_cni_file'] && can_access('backoffice/people/show')): ?>
                                 <div class="bo-action-group">
                                     <a class="btn btn-bo-icon" href="<?= site_url('backoffice/people/' . $row['id'] . '/cni/view') ?>" target="_blank" rel="noopener" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.people_action_view_cni'), 'attr') ?>">
                                         <i class="bi bi-eye" aria-hidden="true"></i>
@@ -124,6 +123,8 @@
                                         <i class="bi bi-download" aria-hidden="true"></i>
                                     </a>
                                 </div>
+                            <?php elseif ($row['has_cni_file']): ?>
+                                <span class="text-muted">—</span>
                             <?php else: ?>
                                 <span class="text-muted">—</span>
                             <?php endif; ?>
@@ -138,12 +139,16 @@
                         <td><?= esc($row['place_of_birth']) ?></td>
                         <td>
                             <div class="bo-action-group">
+                                <?php if (can_access('backoffice/people/edit')): ?>
                                 <a class="btn btn-bo-icon" href="<?= site_url('backoffice/people/' . $row['id'] . '/edit') ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.people_action_edit'), 'attr') ?>">
                                     <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                 </a>
+                                <?php endif; ?>
+                                <?php if (can_access('backoffice/people/show')): ?>
                                 <a class="btn btn-bo-icon" href="<?= site_url('backoffice/people/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.people_action_view'), 'attr') ?>">
                                     <i class="bi bi-card-heading" aria-hidden="true"></i>
                                 </a>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>

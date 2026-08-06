@@ -79,9 +79,6 @@
                 <label class="form-label" for="filter_date_to"><?= esc(lang('Backoffice.logs_filter_date_to')) ?></label>
                 <input class="form-control" type="date" id="filter_date_to" name="date_to" value="<?= esc((string) ($filters['date_to'] ?? ''), 'attr') ?>">
             </div>
-            <div class="col-12 col-md-6 col-xl-2 d-flex align-items-end">
-                <button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button>
-            </div>
         </div>
     </form>
 
@@ -119,9 +116,11 @@
                         <td><span class="bo-ua-cell" title="<?= esc($row['user_agent'], 'attr') ?>"><?= esc(mb_strimwidth($row['user_agent'] ?: '—', 0, 48, '…')) ?></span></td>
                         <td>
                             <div class="bo-row-actions">
+                                <?php if (can_access('backoffice/system-logs/complainants/show')): ?>
                                 <a class="btn btn-bo-icon" href="<?= site_url('backoffice/system-logs/complainants/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.logs_action_view'), 'attr') ?>">
                                     <i class="bi bi-eye" aria-hidden="true"></i>
                                 </a>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>

@@ -8,9 +8,11 @@
         <h1><?= esc(lang('Backoffice.cmp_title')) ?></h1>
         <p><?= esc(lang('Backoffice.cmp_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/complaints/create')): ?>
     <a class="btn btn-bo-primary" href="<?= site_url('backoffice/complaints/create') ?>">
         <i class="bi bi-plus-lg"></i> <?= esc(lang('Backoffice.cmp_new')) ?>
     </a>
+    <?php endif; ?>
 </section>
 
 <section class="bo-panel bo-crud-panel">
@@ -67,9 +69,6 @@
                 <label class="form-label"><?= esc(lang('Backoffice.cmp_filter_filing')) ?></label>
                 <input class="form-control" type="date" name="date_depot" value="<?= esc($filters['date_depot'] ?? '') ?>">
             </div>
-            <div class="col-12 col-md-6 col-xl-1 d-flex align-items-end">
-                <button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button>
-            </div>
         </div>
     </form>
 
@@ -107,8 +106,12 @@
                     <td><?= esc($row['status']) ?></td>
                     <td>
                         <div class="bo-action-group">
+                            <?php if (can_access('backoffice/complaints/show')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/complaints/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.cmp_action_view'), 'attr') ?>"><i class="bi bi-card-heading"></i></a>
+                            <?php endif; ?>
+                            <?php if (can_access('backoffice/complaints/edit')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/complaints/' . $row['id'] . '/edit') ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.cmp_action_edit'), 'attr') ?>"><i class="bi bi-pencil-square"></i></a>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>

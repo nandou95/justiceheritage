@@ -3,6 +3,7 @@
 namespace Modules\Complaint\Controllers;
 
 use CodeIgniter\HTTP\ResponseInterface;
+use Modules\Complaint\Models\EtapePlainteActionModel;
 use Modules\Complaint\Models\EtapePlainteModel;
 use Modules\Complaint\Services\ComplaintStageConfigService;
 use Modules\Complaint\Services\ComplaintStageService;
@@ -93,6 +94,41 @@ class ComplaintStageConfigs extends \App\Controllers\BaseController
         return $this->response->setJSON([
             'ok'       => true,
             'profiles' => (new ComplaintStageService())->profiles($etapeId),
+        ]);
+    }
+
+    public function stageActions(): ResponseInterface
+    {
+        $etapeId = (int) ($this->request->getGet('etape_plainte_id') ?? 0);
+        $include = (int) ($this->request->getGet('include_id') ?? 0);
+
+        $options = $etapeId > 0
+            ? (new EtapePlainteActionModel())->optionsForEtape($etapeId, true)
+            : [];
+
+        // Keep currently selected action visible on edit even if inactive.
+        if ($include > 0 && $etapeId > 0) {
+            $row = (new EtapePlainteActionModel())->find($include);
+            if ($row && (int) ($row['etape_plainte_id'] ?? 0) === $etapeId) {
+                $exists = false;
+                foreach ($options as $opt) {
+                    if ((int) $opt['id'] === $include) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                if (! $exists) {
+                    $options[] = [
+                        'id'    => $row['etape_plainte_action_id'],
+                        'label' => $row['desc_etape_plainte_action'],
+                    ];
+                }
+            }
+        }
+
+        return $this->response->setJSON([
+            'ok'      => true,
+            'options' => $options,
         ]);
     }
 }

@@ -16,10 +16,10 @@ class PermissionService
     /**
      * @return list<array<string, mixed>>
      */
-    public function list(?bool $isActive = null): array
+    public function list(?bool $isActive = null, ?string $search = null): array
     {
         try {
-            $rows = $this->permissions->listFiltered($isActive);
+            $rows = $this->permissions->listFiltered($isActive, $search);
         } catch (\Throwable $e) {
             log_message('error', 'Failed to list permissions: {message}', ['message' => $e->getMessage()]);
 
@@ -27,14 +27,14 @@ class PermissionService
         }
 
         return array_map(static function (array $row): array {
-            $active = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $enabled = db_bool($row['is_active'] ?? false);
 
             return [
                 'id'          => (int) $row['permission_id'],
                 'description' => $row['description_permission'] ?? '',
                 'url_route'   => $row['url_route'] ?? '',
-                'is_active'   => $active,
-                'status'      => $active ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
+                'is_active'   => $enabled,
+                'status'      => $enabled ? lang('Backoffice.perm_status_enabled') : lang('Backoffice.perm_status_disabled'),
             ];
         }, $rows);
     }
@@ -129,7 +129,7 @@ class PermissionService
             return ['ok' => false, 'errors' => [lang('Backoffice.perm_err_not_found')]];
         }
 
-        $isActive   = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $isActive   = db_bool($row['is_active'] ?? false);
         $activating = ! $isActive;
 
         try {

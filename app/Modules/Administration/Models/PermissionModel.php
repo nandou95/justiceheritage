@@ -19,31 +19,50 @@ class PermissionModel extends Model
     /**
      * @return list<array<string, mixed>>
      */
-    public function listFiltered(?bool $isActive = null): array
+    public function listFiltered(?bool $isActive = null, ?string $search = null): array
     {
-        $builder = $this->builder()
-            ->select('permission_id, description_permission, url_route, is_active')
-            ->orderBy('description_permission', 'ASC');
+        $sql = <<<'SQL'
+            SELECT permission_id, description_permission, url_route, is_active
+            FROM administration.permission
+            WHERE 1 = 1
+        SQL;
+
+        $params = [];
 
         if ($isActive === true) {
-            $builder->where('is_active', true);
+            $sql .= ' AND is_active = TRUE';
         } elseif ($isActive === false) {
-            $builder->groupStart()
-                ->where('is_active', false)
-                ->orWhere('is_active', null)
-                ->groupEnd();
+            $sql .= ' AND is_active = FALSE';
         }
 
-        return $builder->get()->getResultArray();
+        $search = $search !== null ? trim($search) : '';
+        if ($search !== '') {
+            $sql .= ' AND (
+                description_permission ILIKE ?
+                OR url_route ILIKE ?
+            )';
+            $like = '%' . $search . '%';
+            $params[] = $like;
+            $params[] = $like;
+        }
+
+        $sql .= ' ORDER BY description_permission ASC';
+
+        return $this->db->query($sql, $params)->getResultArray();
     }
 
     public function routeExists(string $route, ?int $ignoreId = null): bool
     {
-        $builder = $this->builder()->where('LOWER(url_route) =', mb_strtolower($route), false);
+        $sql = 'SELECT 1 FROM administration.permission WHERE LOWER(url_route) = LOWER(?)';
+        $params = [$route];
+
         if ($ignoreId) {
-            $builder->where('permission_id !=', $ignoreId);
+            $sql .= ' AND permission_id != ?';
+            $params[] = $ignoreId;
         }
 
-        return $builder->countAllResults() > 0;
+        $sql .= ' LIMIT 1';
+
+        return $this->db->query($sql, $params)->getFirstRow() !== null;
     }
 }

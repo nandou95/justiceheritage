@@ -1,4 +1,9 @@
 <?= $this->extend('layouts/backoffice') ?>
+
+<?= $this->section('styles') ?>
+<link rel="stylesheet" href="<?= public_asset('assets/vendor/tom-select/tom-select.bootstrap5.min.css') ?>">
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 <?= view('Modules\Administration\Views\partials\flash') ?>
 
@@ -35,7 +40,7 @@ $isAudience = old('is_audience') !== null ? (bool) old('is_audience') : filter_v
 </section>
 
 <section class="bo-panel bo-crud-panel">
-    <form class="bo-form needs-validation" method="post" action="<?= esc($action) ?>" novalidate>
+    <form class="bo-form needs-validation" method="post" action="<?= esc($action) ?>" novalidate data-bo-cs-form>
         <?= csrf_field() ?>
         <div class="row g-3">
             <div class="col-12 col-md-6">
@@ -55,13 +60,22 @@ $isAudience = old('is_audience') !== null ? (bool) old('is_audience') : filter_v
             </div>
             <div class="col-12">
                 <label class="form-label" for="profil_ids"><?= esc(lang('Backoffice.cs_field_profiles')) ?> *</label>
-                <select class="form-select" id="profil_ids" name="profil_ids[]" multiple size="8" required>
+                <select
+                    class="form-select"
+                    id="profil_ids"
+                    name="profil_ids[]"
+                    multiple
+                    required
+                    data-bo-profile-multiselect
+                    data-placeholder="<?= esc(lang('Backoffice.cs_profiles_placeholder'), 'attr') ?>"
+                    data-no-results="<?= esc(lang('Backoffice.cs_profiles_no_results'), 'attr') ?>"
+                >
                     <?php foreach ($profiles as $opt): ?>
                         <option value="<?= esc($opt['id']) ?>" <?= in_array((string) $opt['id'], $selectedProfiles, true) ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
                     <?php endforeach; ?>
                 </select>
                 <div class="form-text"><?= esc(lang('Backoffice.cs_hint_profiles')) ?></div>
-                <div class="invalid-feedback"><?= esc(lang('Backoffice.validation_required')) ?></div>
+                <div class="invalid-feedback" data-bo-profiles-feedback><?= esc(lang('Backoffice.cs_err_profiles')) ?></div>
             </div>
             <div class="col-12 col-md-6">
                 <div class="form-check form-switch">
@@ -84,10 +98,57 @@ $isAudience = old('is_audience') !== null ? (bool) old('is_audience') : filter_v
         </div>
     </form>
 </section>
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script src="<?= public_asset('assets/vendor/tom-select/tom-select.complete.min.js') ?>"></script>
 <script>
-document.querySelector('.bo-form.needs-validation')?.addEventListener('submit', function (event) {
-    if (!this.checkValidity()) { event.preventDefault(); event.stopPropagation(); }
-    this.classList.add('was-validated');
-});
+(() => {
+  const form = document.querySelector("[data-bo-cs-form]");
+  const select = document.querySelector("[data-bo-profile-multiselect]");
+  if (!form || !select || typeof TomSelect === "undefined") {
+    return;
+  }
+
+  const ts = new TomSelect(select, {
+    plugins: ["remove_button", "clear_button"],
+    maxItems: null,
+    create: false,
+    persist: false,
+    hideSelected: true,
+    closeAfterSelect: false,
+    placeholder: select.dataset.placeholder || "",
+    render: {
+      no_results: (_data, escape) =>
+        `<div class="no-results">${escape(select.dataset.noResults || "No results")}</div>`,
+    },
+  });
+
+  const markProfilesValidity = () => {
+    const hasSelection = (ts.getValue() || []).length > 0;
+    select.setCustomValidity(hasSelection ? "" : (select.dataset.placeholder ? "required" : "required"));
+    const wrap = select.closest(".col-12");
+    const control = wrap?.querySelector(".ts-wrapper");
+    if (control) {
+      control.classList.toggle("is-invalid", !hasSelection && form.classList.contains("was-validated"));
+      control.classList.toggle("is-valid", hasSelection && form.classList.contains("was-validated"));
+    }
+    return hasSelection;
+  };
+
+  ts.on("change", markProfilesValidity);
+  ts.on("item_add", markProfilesValidity);
+  ts.on("item_remove", markProfilesValidity);
+
+  form.addEventListener("submit", (event) => {
+    const profilesOk = markProfilesValidity();
+    if (!form.checkValidity() || !profilesOk) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    form.classList.add("was-validated");
+    markProfilesValidity();
+  });
+})();
 </script>
 <?= $this->endSection() ?>

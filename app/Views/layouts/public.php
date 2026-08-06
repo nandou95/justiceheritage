@@ -53,6 +53,12 @@
                     <a href="<?= site_url('dispute-management') ?>" <?= ($active ?? '') === 'dispute' ? 'aria-current="page"' : '' ?>><?= esc(lang('Site.nav_dispute')) ?></a>
                     <a href="<?= site_url('register') ?>" <?= ($active ?? '') === 'register' ? 'aria-current="page"' : '' ?>><?= esc(lang('Site.nav_register')) ?></a>
                     <a class="btn btn-jh-primary btn-sm" href="<?= site_url('login') ?>"><?= esc(lang('Site.nav_signin')) ?></a>
+                    <a class="btn btn-jh-bo-login btn-sm" href="<?= site_url('backoffice/login') ?>" title="<?= esc(lang('Site.nav_backoffice_login_title'), 'attr') ?>">
+                        <span class="jh-bo-login-ico" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="14" height="14" focusable="false"><path fill="currentColor" d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 2.2 6 2.25V11c0 3.9-2.5 7.4-6 8.8-3.5-1.4-6-4.9-6-8.8V6.45l6-2.25z"/><path fill="currentColor" d="M11 7h2v5.2l2.4 2.4-1.4 1.4L12 13.8l-2 2-1.4-1.4L11 12.2V7z"/></svg>
+                        </span>
+                        <?= esc(lang('Site.nav_backoffice_login')) ?>
+                    </a>
                 </nav>
             </div>
         </div>
@@ -75,8 +81,7 @@
                         <li><a href="<?= site_url('dispute-management') ?>"><?= esc(lang('Site.footer_how')) ?></a></li>
                         <li><a href="<?= site_url('register') ?>"><?= esc(lang('Site.footer_register')) ?></a></li>
                         <li><a href="<?= site_url('login') ?>"><?= esc(lang('Site.footer_signin')) ?></a></li>
-                        <li><a href="<?= site_url('backoffice') ?>">Backoffice</a></li>
-                        <li><a href="<?= site_url('portal') ?>">Complainant portal</a></li>
+                        <li><a href="<?= site_url('backoffice/login') ?>"><?= esc(lang('Site.footer_backoffice_login')) ?></a></li>
                     </ul>
                 </div>
                 <div>

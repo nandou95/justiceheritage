@@ -87,7 +87,7 @@ class BackofficeAppealService
         return array_map(static function (array $row): array {
             $level = $row['desc_niveau_juridiction'] ?? '';
             $court = $row['nom_juridiction'] ?? '';
-            $within = filter_var($row['dans_les_delais'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $within = db_bool($row['dans_les_delais'] ?? false);
             $verdict = trim(($row['description_type_verdict'] ?? '') . ' — ' . ($row['verdict_resume'] ?? ''), ' —');
 
             return [
@@ -432,7 +432,7 @@ class BackofficeAppealService
         $niveauId = (int) ($input['niveau_juridiction_id'] ?? 0);
         if ($requireDocs && $niveauId > 0) {
             foreach ($this->docTypes->listByNiveau($niveauId, true) as $type) {
-                if (! filter_var($type['is_obligatoire'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                if (! db_bool($type['is_obligatoire'] ?? false)) {
                     continue;
                 }
                 $typeId   = (int) $type['type_document_id'];

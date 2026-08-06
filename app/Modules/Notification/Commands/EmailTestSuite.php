@@ -82,6 +82,18 @@ class EmailTestSuite extends BaseCommand
 
             'registration' => static fn () => $mailer->sendAccountRegistration($toEmail, $toName, 'demo_user', 'DemoPass123!', site_url('login')),
 
+            'bo_user_registration' => static fn () => $mailer->sendBackofficeUserRegistration(
+                $toEmail,
+                $toName,
+                'DemoPass123!',
+                [
+                    'cni'       => 'CNI-DEMO-001',
+                    'matricule' => 'MAT-DEMO-001',
+                    'email'     => $toEmail,
+                ],
+                site_url('backoffice')
+            ),
+
             'verification' => static fn () => $mailer->sendEmailVerification($toEmail, $toName, site_url('login')),
 
             'password_reset' => static fn () => $mailer->sendPasswordReset($toEmail, $toName, site_url('login')),

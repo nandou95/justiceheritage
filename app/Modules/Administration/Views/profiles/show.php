@@ -15,10 +15,12 @@
             <i class="bi bi-arrow-left" aria-hidden="true"></i>
             <?= esc(lang('Backoffice.profiles_back_list')) ?>
         </a>
+        <?php if (can_access('backoffice/profiles/edit')): ?>
         <a class="btn btn-bo-primary" href="<?= site_url('backoffice/profiles/' . (int) $record['profil_id'] . '/edit') ?>">
             <i class="bi bi-pencil-square" aria-hidden="true"></i>
             <?= esc(lang('Backoffice.profiles_action_edit')) ?>
         </a>
+        <?php endif; ?>
     </div>
 </section>
 

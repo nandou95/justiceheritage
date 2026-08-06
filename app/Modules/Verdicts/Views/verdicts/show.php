@@ -39,7 +39,7 @@ $partyRow = static fn (array $r): array => [
                 <div>
                     <dt><?= esc(lang('Backoffice.vrd_field_report')) ?></dt>
                     <dd>
-                        <?php if ($hasReport): ?>
+                        <?php if ($hasReport && can_access('backoffice/verdicts/show')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/verdicts/' . (int) $record['verdict_id'] . '/report/view') ?>" target="_blank" rel="noopener" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.vrd_doc_view'), 'attr') ?>"><i class="bi bi-eye"></i></a>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/verdicts/' . (int) $record['verdict_id'] . '/report/download') ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.vrd_doc_download'), 'attr') ?>"><i class="bi bi-download"></i></a>
                         <?php else: ?>
@@ -82,7 +82,7 @@ $tables = [
     ['id' => 'vrd-staff-table', 'title' => lang('Backoffice.vrd_section_staff'), 'headers' => [lang('Backoffice.people_col_name'), lang('Backoffice.vrd_col_profile'), lang('Backoffice.vrd_col_status')], 'rows' => array_map(static fn ($r) => [
         trim((string) ($r['assignee_name'] ?? '')) ?: '—',
         $r['libelle_profil'] ?? '—',
-        filter_var($r['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN) ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
+        db_bool($r['is_active'] ?? false) ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
     ], $staff)],
     ['id' => 'vrd-complainants-table', 'title' => lang('Backoffice.vrd_field_complainants'), 'headers' => [lang('Backoffice.people_col_name'), lang('Backoffice.vrd_col_role'), lang('Backoffice.people_col_cni'), lang('Backoffice.people_field_phone'), lang('Backoffice.people_field_email')], 'rows' => array_map($partyRow, $complainants)],
     ['id' => 'vrd-defendants-table', 'title' => lang('Backoffice.vrd_field_defendants'), 'headers' => [lang('Backoffice.people_col_name'), lang('Backoffice.vrd_col_role'), lang('Backoffice.people_col_cni'), lang('Backoffice.people_field_phone'), lang('Backoffice.people_field_email')], 'rows' => array_map($partyRow, $defendants)],
@@ -105,7 +105,7 @@ $tables = [
         $r['nouvelle_plainte_numero'] ?? ('#' . ($r['recours_id'] ?? '')),
         $r['date_recours'] ?? '—',
         trim(($r['desc_niveau_juridiction'] ?? '') . ' / ' . ($r['nom_juridiction'] ?? ''), ' /') ?: '—',
-        filter_var($r['dans_les_delais'] ?? false, FILTER_VALIDATE_BOOLEAN) ? lang('Backoffice.apl_field_within_deadline') : '—',
+        db_bool($r['dans_les_delais'] ?? false) ? lang('Backoffice.apl_field_within_deadline') : '—',
     ], $appeals)],
 ];
 $tableIds = array_column($tables, 'id');

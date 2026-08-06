@@ -97,7 +97,7 @@ class PersonService
         }
 
         return array_map(static function (array $row): array {
-            $isAppeal = filter_var($row['is_recours'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $isAppeal = db_bool($row['is_recours'] ?? false);
 
             return [
                 'case_number'   => (string) ($row['numero_dossier'] ?? ''),

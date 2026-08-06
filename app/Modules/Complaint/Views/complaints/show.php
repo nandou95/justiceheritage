@@ -10,7 +10,9 @@
     </div>
     <div class="bo-crud-head-actions">
         <a class="btn btn-bo-secondary" href="<?= site_url('backoffice/complaints') ?>"><i class="bi bi-arrow-left"></i> <?= esc(lang('Backoffice.cmp_back_list')) ?></a>
+        <?php if (can_access('backoffice/complaints/edit')): ?>
         <a class="btn btn-bo-primary" href="<?= site_url('backoffice/complaints/' . (int) $record['plainte_id'] . '/edit') ?>"><i class="bi bi-pencil-square"></i> <?= esc(lang('Backoffice.cmp_action_edit')) ?></a>
+        <?php endif; ?>
     </div>
 </section>
 

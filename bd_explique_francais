@@ -3,7 +3,7 @@ Base des donnees
 Structure des tables schemas par schemas:
 
 A. schemas : administration 
-1. Table de gestion des utilisateurs : "SELECT utilisateur_id,nom_utilisateur,prenom_utilisateur,numero_cni,numero_matricule,telephone,email,date_naissance,profil_id,statut_compte_id,juridiction_id,sexe_id,province_naissance_id,commune_naissance_id,zone_naissance_id,colline_naissance_id,user_name,mot_de_passe_hash,derniere_connexion,created_at,updated_at,code_authentification FROM administration.utilisateur;"
+1. Table de gestion des utilisateurs : "SELECT utilisateur_id,nom_utilisateur,prenom_utilisateur,numero_cni,numero_matricule,telephone,email,date_naissance,profil_id,statut_compte_id,juridiction_id,sexe_id,province_naissance_id,commune_naissance_id,zone_naissance_id,colline_naissance_id,mot_de_passe_hash,derniere_connexion,created_at,updated_at,code_authentification FROM administration.utilisateur;"
 2. Table de gestion des role (profil) : "SELECT profil_id, code_profil, libelle_profil, description_profil, created_at,is_active FROM administration.profil;"
 3. Table de gestion des permission : "SELECT permission_id, description_permission, url_route, is_active FROM administration.permission;"
 4. Table de liaison entre les permissions et les roles (profil) : "SELECT profil_permission_id, profil_id, permission_id, is_active FROM administration.profil_permission;"

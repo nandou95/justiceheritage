@@ -1,5 +1,6 @@
 <?php
 $success = session()->getFlashdata('success');
+$warning = session()->getFlashdata('warning');
 $error   = session()->getFlashdata('error');
 $errors  = session()->getFlashdata('errors');
 ?>
@@ -7,6 +8,13 @@ $errors  = session()->getFlashdata('errors');
 <?php if ($success): ?>
     <div class="alert alert-success alert-dismissible fade show bo-alert" role="alert">
         <?= esc($success) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+<?php endif; ?>
+
+<?php if ($warning): ?>
+    <div class="alert alert-warning alert-dismissible fade show bo-alert" role="alert">
+        <?= esc($warning) ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 <?php endif; ?>

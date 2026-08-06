@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Filters\BackofficeAuthFilter;
 use App\Filters\ComplainantAuthFilter;
 use App\Filters\LocaleFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
@@ -38,6 +39,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'locale'           => LocaleFilter::class,
         'complainantAuth'  => ComplainantAuthFilter::class,
+        'backofficeAuth'   => BackofficeAuthFilter::class,
     ];
 
     /**
@@ -111,5 +113,12 @@ class Filters extends BaseFilters
      *
      * @var array<string, array<string, list<string>>>
      */
-    public array $filters = [];
+    public array $filters = [
+        'backofficeAuth' => [
+            'before' => [
+                'backoffice',
+                'backoffice/*',
+            ],
+        ],
+    ];
 }

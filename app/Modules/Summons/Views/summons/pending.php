@@ -58,9 +58,6 @@
                 <label class="form-label"><?= esc(lang('Backoffice.sum_filter_filing_date')) ?></label>
                 <input class="form-control" type="date" name="date_depot" value="<?= esc($filters['date_depot'] ?? '') ?>">
             </div>
-            <div class="col-12 col-md-6 col-xl-2 d-flex align-items-end">
-                <button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button>
-            </div>
         </div>
     </form>
 
@@ -98,8 +95,12 @@
                     <td><?= esc($row['status']) ?></td>
                     <td>
                         <div class="bo-action-group">
+                            <?php if (can_access('backoffice/complaints/show')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/complaints/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.sum_action_view'), 'attr') ?>"><i class="bi bi-card-heading"></i></a>
+                            <?php endif; ?>
+                            <?php if (can_access('backoffice/summons/generate')): ?>
                             <a class="btn btn-bo-icon" href="<?= site_url('backoffice/summons/create/' . $row['id']) ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.sum_action_generate'), 'attr') ?>"><i class="bi bi-envelope-plus"></i></a>
+                            <?php endif; ?>
                         </div>
                     </td>
                 </tr>

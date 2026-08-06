@@ -74,7 +74,7 @@ class ConfigurationJuridictionModel extends Model
         if (array_key_exists('is_active', $filters) && $filters['is_active'] !== null) {
             $sql .= $filters['is_active'] === true
                 ? ' AND cj.is_active = TRUE'
-                : ' AND (cj.is_active = FALSE OR cj.is_active IS NULL)';
+                : ' AND cj.is_active = FALSE';
         }
 
         $sql .= ' ORDER BY j.nom_juridiction ASC';

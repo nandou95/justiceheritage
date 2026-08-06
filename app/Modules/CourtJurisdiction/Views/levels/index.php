@@ -7,9 +7,11 @@
         <h1><?= esc(lang('Backoffice.jl_title')) ?></h1>
         <p><?= esc(lang('Backoffice.jl_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/jurisdiction-levels/create')): ?>
     <button class="btn btn-bo-primary" type="button" data-bs-toggle="modal" data-bs-target="#jlFormModal" data-bo-jl-create>
         <i class="bi bi-plus-lg"></i> <?= esc(lang('Backoffice.jl_new')) ?>
     </button>
+    <?php endif; ?>
 </section>
 <section class="bo-panel bo-crud-panel">
     <form class="bo-filters" method="get" action="<?= site_url('backoffice/jurisdiction-levels') ?>">
@@ -20,7 +22,6 @@
                     <option value="true" <?= ($status ?? '') === 'true' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_active')) ?></option>
                     <option value="false" <?= ($status ?? '') === 'false' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_inactive')) ?></option>
                 </select></div>
-            <div class="col-md-2"><button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button></div>
         </div>
     </form>
     <div class="bo-table-toolbar"><label class="bo-table-search"><i class="bi bi-search"></i><input type="search" class="form-control" id="jl-table-search" placeholder="<?= esc(lang('Backoffice.search_placeholder'), 'attr') ?>"></label></div>
@@ -39,10 +40,14 @@
                     <td><?= esc($row['is_appeal']) ?></td>
                     <td><span class="bo-status-pill <?= $row['is_active'] ? 'is-active' : 'is-inactive' ?>"><?= esc($row['status']) ?></span></td>
                     <td><div class="bo-action-group">
+                        <?php if (can_access('backoffice/jurisdiction-levels/edit')): ?>
                         <button class="btn btn-bo-icon" type="button" data-bo-jl-edit data-id="<?= esc($row['id']) ?>" data-description="<?= esc($row['description'], 'attr') ?>" data-recours="<?= $row['is_recours'] ? '1' : '0' ?>" data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.jl_action_edit'), 'attr') ?>"><i class="bi bi-pencil-square"></i></button>
+                        <?php endif; ?>
+                        <?php if (can_access('backoffice/jurisdiction-levels/toggle-status')): ?>
                         <button class="btn btn-bo-icon <?= $row['is_active'] ? 'is-danger' : 'is-success' ?>" type="button" data-bo-toggle-jl data-id="<?= esc($row['id']) ?>" data-name="<?= esc($row['description'], 'attr') ?>" data-activate="<?= $row['is_active'] ? '0' : '1' ?>" data-bs-toggle="tooltip" title="<?= esc($row['is_active'] ? lang('Backoffice.jl_action_deactivate') : lang('Backoffice.jl_action_activate'), 'attr') ?>">
                             <i class="bi <?= $row['is_active'] ? 'bi-toggle-off' : 'bi-toggle-on' ?>"></i>
                         </button>
+                        <?php endif; ?>
                     </div></td>
                 </tr>
             <?php endforeach; ?>

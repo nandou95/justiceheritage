@@ -40,7 +40,7 @@ class ProfileService
         }
 
         return array_map(static function (array $row): array {
-            $active = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $active = db_bool($row['is_active'] ?? false);
 
             return [
                 'id'                => (int) $row['profil_id'],
@@ -75,7 +75,7 @@ class ProfileService
             ]);
         }
 
-        $active = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $active = db_bool($row['is_active'] ?? false);
 
         return [
             'profil_id'           => (int) $row['profil_id'],
@@ -87,14 +87,14 @@ class ProfileService
             'created_at'          => $row['created_at'] ?? null,
             'permission_ids'      => array_map(static fn (array $p): int => (int) $p['permission_id'], $assigned),
             'permissions'         => array_map(static function (array $p): array {
-                $permActive = filter_var($p['permission_is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                $permActive = db_bool($p['permission_is_active'] ?? false);
 
                 return [
                     'id'          => (int) $p['permission_id'],
                     'description' => $p['description_permission'] ?? '',
                     'url_route'   => $p['url_route'] ?? '',
                     'is_active'   => $permActive,
-                    'status'      => $permActive ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
+                    'status'      => $permActive ? lang('Backoffice.perm_status_enabled') : lang('Backoffice.perm_status_disabled'),
                 ];
             }, $assigned),
             'permissions_count'   => count($assigned),
@@ -104,7 +104,7 @@ class ProfileService
     /**
      * Permissions grouped for assignment UI.
      *
-     * @return list<array{module:string,permissions:list<array<string,mixed>>}>
+     * @return list<array{module_key:string,module:string,permissions:list<array<string,mixed>>}>
      */
     public function permissionsGrouped(): array
     {
@@ -120,29 +120,33 @@ class ProfileService
 
         $groups = [];
         foreach ($rows as $row) {
-            $active = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            $route  = (string) ($row['url_route'] ?? '');
-            $module = $this->moduleFromRoute($route);
+            $active    = db_bool($row['is_active'] ?? false);
+            $route     = (string) ($row['url_route'] ?? '');
+            $moduleKey = $this->moduleKeyFromRoute($route);
 
-            $groups[$module][] = [
+            $groups[$moduleKey][] = [
                 'id'          => (int) $row['permission_id'],
                 'description' => $row['description_permission'] ?? '',
                 'url_route'   => $route,
                 'is_active'   => $active,
-                'status'      => $active ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
+                'status'      => $active ? lang('Backoffice.perm_status_enabled') : lang('Backoffice.perm_status_disabled'),
             ];
         }
 
         ksort($groups, SORT_NATURAL | SORT_FLAG_CASE);
 
         $result = [];
-        foreach ($groups as $module => $permissions) {
+        foreach ($groups as $moduleKey => $permissions) {
             usort($permissions, static fn (array $a, array $b): int => strcasecmp($a['description'], $b['description']));
             $result[] = [
-                'module'      => $module,
+                'module_key'  => $moduleKey,
+                'module'      => $this->moduleTitle($moduleKey),
                 'permissions' => $permissions,
             ];
         }
+
+        // Sort groups by translated title so FR/EN order stays readable.
+        usort($result, static fn (array $a, array $b): int => strcasecmp($a['module'], $b['module']));
 
         return $result;
     }
@@ -290,7 +294,7 @@ class ProfileService
             return ['ok' => false, 'errors' => [lang('Backoffice.profiles_err_not_found')]];
         }
 
-        $isActive   = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $isActive   = db_bool($row['is_active'] ?? false);
         $activating = ! $isActive;
 
         try {
@@ -365,19 +369,38 @@ class ProfileService
         return array_values(array_unique(array_filter(array_map('intval', $raw))));
     }
 
-    private function moduleFromRoute(string $route): string
+    /**
+     * Stable permission-group key derived from the route (locale-independent).
+     */
+    private function moduleKeyFromRoute(string $route): string
     {
-        $path = trim(parse_url($route, PHP_URL_PATH) ?: $route, '/');
+        $path = trim((string) (parse_url($route, PHP_URL_PATH) ?: $route), '/');
         if ($path === '') {
-            return lang('Backoffice.profiles_module_general');
+            return 'general';
         }
 
         $parts = explode('/', $path);
         if (($parts[0] ?? '') === 'backoffice' && isset($parts[1]) && $parts[1] !== '') {
-            return ucfirst(str_replace(['-', '_'], ' ', $parts[1]));
+            return strtolower((string) $parts[1]);
         }
 
-        return ucfirst(str_replace(['-', '_'], ' ', $parts[0]));
+        return strtolower((string) ($parts[0] ?: 'general'));
+    }
+
+    /**
+     * Localized permission-group title from language files.
+     */
+    private function moduleTitle(string $moduleKey): string
+    {
+        $key      = 'Backoffice.perm_group_' . str_replace('-', '_', $moduleKey);
+        $translated = lang($key);
+
+        // Missing language line: CI4 returns the key path.
+        if ($translated === $key || $translated === 'perm_group_' . str_replace('-', '_', $moduleKey)) {
+            return ucfirst(str_replace(['-', '_'], ' ', $moduleKey));
+        }
+
+        return $translated;
     }
 
     private function actorId(): ?int

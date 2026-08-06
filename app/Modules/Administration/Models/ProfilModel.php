@@ -19,21 +19,54 @@ class ProfilModel extends Model
     ];
 
     /**
+     * Active profiles for select lists.
+     * Optionally include specific IDs (e.g. already assigned inactive profiles on edit).
+     *
+     * @param list<int> $alsoIncludeIds
      * @return list<array{id:int|string,label:string}>
      */
-    public function options(): array
+    public function options(array $alsoIncludeIds = []): array
     {
-        $rows = $this->builder()
-            ->select('profil_id, libelle_profil')
-            ->where('(is_active IS NULL OR is_active = TRUE)', null, false)
-            ->orderBy('libelle_profil', 'ASC')
-            ->get()
-            ->getResultArray();
+        $alsoIncludeIds = array_values(array_unique(array_filter(
+            array_map('intval', $alsoIncludeIds),
+            static fn (int $id): bool => $id > 0
+        )));
+
+        $builder = $this->builder()
+            ->select('profil_id, libelle_profil, is_active')
+            ->orderBy('libelle_profil', 'ASC');
+
+        if ($alsoIncludeIds === []) {
+            $builder->where('(is_active IS NULL OR is_active = TRUE)', null, false);
+        } else {
+            $ids = implode(',', $alsoIncludeIds);
+            $builder->where(
+                "(is_active IS NULL OR is_active = TRUE OR profil_id IN ({$ids}))",
+                null,
+                false
+            );
+        }
+
+        $rows = $builder->get()->getResultArray();
 
         return array_map(static fn (array $row): array => [
             'id'    => $row['profil_id'],
             'label' => $row['libelle_profil'],
         ], $rows);
+    }
+
+    public function isActiveProfile(int $profilId): bool
+    {
+        if ($profilId < 1) {
+            return false;
+        }
+
+        $row = $this->find($profilId);
+        if (! $row) {
+            return false;
+        }
+
+        return db_bool($row['is_active'] ?? false);
     }
 
     /**
@@ -61,7 +94,7 @@ class ProfilModel extends Model
         if ($isActive === true) {
             $sql .= ' AND pr.is_active = TRUE';
         } elseif ($isActive === false) {
-            $sql .= ' AND (pr.is_active = FALSE OR pr.is_active IS NULL)';
+            $sql .= ' AND pr.is_active = FALSE';
         }
 
         $sql .= ' GROUP BY pr.profil_id, pr.code_profil, pr.libelle_profil, pr.description_profil, pr.is_active, pr.created_at';
@@ -72,11 +105,14 @@ class ProfilModel extends Model
 
     public function codeExists(string $code, ?int $ignoreId = null): bool
     {
-        $builder = $this->builder()->where('LOWER(code_profil) =', mb_strtolower($code), false);
+        $sql = 'SELECT 1 FROM administration.profil WHERE LOWER(code_profil) = LOWER(?)';
+        $params = [$code];
         if ($ignoreId) {
-            $builder->where('profil_id !=', $ignoreId);
+            $sql .= ' AND profil_id != ?';
+            $params[] = $ignoreId;
         }
+        $sql .= ' LIMIT 1';
 
-        return $builder->countAllResults() > 0;
+        return $this->db->query($sql, $params)->getFirstRow() !== null;
     }
 }

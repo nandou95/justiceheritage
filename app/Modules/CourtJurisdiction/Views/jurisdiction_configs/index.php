@@ -7,9 +7,11 @@
         <h1><?= esc(lang('Backoffice.cjc_title')) ?></h1>
         <p><?= esc(lang('Backoffice.cjc_lead')) ?></p>
     </div>
+    <?php if (can_access('backoffice/court-jurisdiction-configs/create')): ?>
     <button class="btn btn-bo-primary" type="button" data-bs-toggle="modal" data-bs-target="#cjcFormModal" data-bo-cjc-create>
         <i class="bi bi-plus-lg"></i> <?= esc(lang('Backoffice.cjc_new')) ?>
     </button>
+    <?php endif; ?>
 </section>
 <section class="bo-panel bo-crud-panel">
     <form class="bo-filters" method="get" action="<?= site_url('backoffice/court-jurisdiction-configs') ?>" data-bo-cjc-filters data-api-communes="<?= esc(site_url('api/communes'), 'attr') ?>">
@@ -35,7 +37,6 @@
                     <option value="true" <?= ($filters['status'] ?? '') === 'true' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_active')) ?></option>
                     <option value="false" <?= ($filters['status'] ?? '') === 'false' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_inactive')) ?></option>
                 </select></div>
-            <div class="col-md-1 d-flex align-items-end"><button class="btn btn-bo-secondary w-100" type="submit"><?= esc(lang('Backoffice.filter_apply')) ?></button></div>
         </div>
     </form>
     <div class="bo-table-toolbar"><label class="bo-table-search"><i class="bi bi-search"></i><input type="search" class="form-control" id="cjc-table-search" placeholder="<?= esc(lang('Backoffice.search_placeholder'), 'attr') ?>"></label></div>
@@ -54,6 +55,7 @@
                     <td><?= esc($row['parent_court']) ?></td>
                     <td><span class="bo-status-pill <?= $row['is_active'] ? 'is-active' : 'is-inactive' ?>"><?= esc($row['status']) ?></span></td>
                     <td><div class="bo-action-group">
+                        <?php if (can_access('backoffice/court-jurisdiction-configs/edit')): ?>
                         <button class="btn btn-bo-icon" type="button" data-bo-cjc-edit
                             data-id="<?= esc($row['id']) ?>"
                             data-juridiction-id="<?= esc($row['juridiction_id']) ?>"
@@ -65,9 +67,12 @@
                             data-parent-commune-id="<?= esc($row['parent_commune_id'] ?? '') ?>"
                             data-parent-niveau-id="<?= esc($row['parent_niveau_id'] ?? '') ?>"
                             data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.cjc_action_edit'), 'attr') ?>"><i class="bi bi-pencil-square"></i></button>
+                        <?php endif; ?>
+                        <?php if (can_access('backoffice/court-jurisdiction-configs/toggle-status')): ?>
                         <button class="btn btn-bo-icon <?= $row['is_active'] ? 'is-danger' : 'is-success' ?>" type="button" data-bo-toggle-cjc data-id="<?= esc($row['id']) ?>" data-name="<?= esc($row['court'], 'attr') ?>" data-activate="<?= $row['is_active'] ? '0' : '1' ?>" data-bs-toggle="tooltip" title="<?= esc($row['is_active'] ? lang('Backoffice.cjc_action_deactivate') : lang('Backoffice.cjc_action_activate'), 'attr') ?>">
                             <i class="bi <?= $row['is_active'] ? 'bi-toggle-off' : 'bi-toggle-on' ?>"></i>
                         </button>
+                        <?php endif; ?>
                     </div></td>
                 </tr>
             <?php endforeach; ?>

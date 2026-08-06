@@ -89,7 +89,7 @@ class JuridictionModel extends Model
         if (array_key_exists('is_active', $filters) && $filters['is_active'] !== null) {
             $sql .= $filters['is_active'] === true
                 ? ' AND j.is_active = TRUE'
-                : ' AND (j.is_active = FALSE OR j.is_active IS NULL)';
+                : ' AND j.is_active = FALSE';
         }
 
         $sql .= ' ORDER BY j.nom_juridiction ASC';
@@ -184,11 +184,14 @@ class JuridictionModel extends Model
 
     public function codeExists(string $code, ?int $ignoreId = null): bool
     {
-        $builder = $this->builder()->where('LOWER(code_juridiction) =', mb_strtolower($code), false);
+        $sql = 'SELECT 1 FROM juridiction.juridiction WHERE LOWER(code_juridiction) = LOWER(?)';
+        $params = [$code];
         if ($ignoreId) {
-            $builder->where('juridiction_id !=', $ignoreId);
+            $sql .= ' AND juridiction_id != ?';
+            $params[] = $ignoreId;
         }
+        $sql .= ' LIMIT 1';
 
-        return $builder->countAllResults() > 0;
+        return $this->db->query($sql, $params)->getFirstRow() !== null;
     }
 }

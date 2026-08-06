@@ -142,7 +142,7 @@ class CourtJurisdictionService
             return ['ok' => false, 'errors' => [lang('Backoffice.cj_err_not_found')]];
         }
 
-        $isActive   = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $isActive   = db_bool($row['is_active'] ?? false);
         $activating = ! $isActive;
 
         try {
@@ -259,7 +259,7 @@ class CourtJurisdictionService
      */
     private function mapListRow(array $row): array
     {
-        $active = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $active = db_bool($row['is_active'] ?? false);
         $addressParts = array_filter([
             $row['province_name'] ?? null,
             $row['commune_name'] ?? null,
@@ -287,7 +287,7 @@ class CourtJurisdictionService
      */
     private function mapDetailRow(array $row): array
     {
-        $active = filter_var($row['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $active = db_bool($row['is_active'] ?? false);
 
         return $row + [
             'is_active' => $active,

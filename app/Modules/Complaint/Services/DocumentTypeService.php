@@ -34,7 +34,7 @@ class DocumentTypeService
         }
 
         return array_map(static function (array $row): array {
-            $active = filter_var($row['is_actif'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $active = db_bool($row['is_actif'] ?? false);
 
             return [
                 'id'             => (int) $row['type_document_id'],
@@ -42,7 +42,7 @@ class DocumentTypeService
                 'description'    => $row['libelle_type_document'] ?? '',
                 'level'          => $row['desc_niveau_juridiction'] ?? '—',
                 'niveau_id'      => (int) ($row['niveau_juridiction_id'] ?? 0),
-                'is_obligatoire' => filter_var($row['is_obligatoire'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'is_obligatoire' => db_bool($row['is_obligatoire'] ?? false),
                 'is_active'      => $active,
                 'status'         => $active ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
             ];
@@ -119,7 +119,7 @@ class DocumentTypeService
             return ['ok' => false, 'errors' => [lang('Backoffice.dt_err_not_found')]];
         }
 
-        $isActive   = filter_var($row['is_actif'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $isActive   = db_bool($row['is_actif'] ?? false);
         $activating = ! $isActive;
 
         try {
