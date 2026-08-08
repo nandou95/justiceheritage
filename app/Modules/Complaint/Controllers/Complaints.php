@@ -53,7 +53,7 @@ class Complaints extends \App\Controllers\BaseController
                 'province_id'           => $provinceId ?: null,
                 'commune_id'            => ! empty($filters['commune_id']) ? (int) $filters['commune_id'] : null,
             ]),
-            'statuses' => (new StatutPlainteModel())->options(false),
+            'statuses' => (new StatutPlainteModel())->options($niveauId > 0 ? $niveauId : null, false),
             'user'     => $this->sampleUser(),
         ]);
     }

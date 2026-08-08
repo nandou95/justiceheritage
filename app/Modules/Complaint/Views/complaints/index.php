@@ -18,7 +18,8 @@
 <section class="bo-panel bo-crud-panel">
     <form class="bo-filters" method="get" action="<?= site_url('backoffice/complaints') ?>" data-bo-cmp-filters
           data-api-communes="<?= esc(site_url('api/communes'), 'attr') ?>"
-          data-api-jurisdictions="<?= esc(site_url('backoffice/api/court-jurisdictions'), 'attr') ?>">
+          data-api-jurisdictions="<?= esc(site_url('backoffice/api/court-jurisdictions'), 'attr') ?>"
+          data-api-statuses="<?= esc(site_url('backoffice/api/complaint-statuses'), 'attr') ?>">
         <div class="row g-2">
             <div class="col-12 col-md-6 col-xl-2">
                 <label class="form-label"><?= esc(lang('Backoffice.filter_province')) ?></label>
@@ -58,7 +59,7 @@
             </div>
             <div class="col-12 col-md-6 col-xl-2">
                 <label class="form-label"><?= esc(lang('Backoffice.cmp_filter_status')) ?></label>
-                <select class="form-select" name="statut_plainte_id">
+                <select class="form-select" name="statut_plainte_id" data-filter="status">
                     <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
                     <?php foreach ($statuses as $opt): ?>
                         <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['statut_plainte_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>

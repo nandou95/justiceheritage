@@ -19,11 +19,20 @@
     <form class="bo-filters" method="get" action="<?= site_url('backoffice/complaint-stages') ?>">
         <div class="row g-2 align-items-end">
             <div class="col-md-3">
+                <label class="form-label"><?= esc(lang('Backoffice.filter_jurisdiction_level')) ?></label>
+                <select class="form-select" name="niveau_juridiction_id">
+                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                    <?php foreach ($levels as $opt): ?>
+                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['niveau_juridiction_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-3">
                 <label class="form-label"><?= esc(lang('Backoffice.filter_status')) ?></label>
                 <select class="form-select" name="status">
                     <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <option value="true" <?= ($status ?? '') === 'true' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_active')) ?></option>
-                    <option value="false" <?= ($status ?? '') === 'false' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_inactive')) ?></option>
+                    <option value="true" <?= ($filters['status'] ?? $status ?? '') === 'true' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_active')) ?></option>
+                    <option value="false" <?= ($filters['status'] ?? $status ?? '') === 'false' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_inactive')) ?></option>
                 </select>
             </div>
         </div>
@@ -36,13 +45,15 @@
     </div>
 
     <div class="table-responsive bo-table-wrap">
-        <table class="table table-hover bo-table jh-datatable w-100" id="cs-table" data-page-length="10" data-order-col="0" data-order-dir="asc" data-dom="lrtip">
+        <table class="table table-hover bo-table jh-datatable w-100" id="cs-table" data-page-length="10" data-order='[[3,"asc"],[0,"asc"]]' data-dom="lrtip">
             <thead>
                 <tr>
                     <th><?= esc(lang('Backoffice.cs_col_description')) ?></th>
                     <th><?= esc(lang('Backoffice.cs_col_profiles')) ?></th>
                     <th><?= esc(lang('Backoffice.cs_col_actions_count')) ?></th>
                     <th><?= esc(lang('Backoffice.cs_col_level')) ?></th>
+                    <th><?= esc(lang('Backoffice.cs_col_summons')) ?></th>
+                    <th><?= esc(lang('Backoffice.cs_col_hearing')) ?></th>
                     <th><?= esc(lang('Backoffice.cs_col_status')) ?></th>
                     <th data-orderable="false" data-searchable="false"><?= esc(lang('Backoffice.col_actions')) ?></th>
                 </tr>
@@ -61,7 +72,17 @@
                             <?= (int) $row['actions_count'] ?>
                         </button>
                     </td>
-                    <td><?= esc($row['level']) ?></td>
+                    <td data-order="<?= (int) $row['niveau_id'] ?>"><?= esc($row['level']) ?></td>
+                    <td>
+                        <span class="bo-status-pill <?= ! empty($row['is_convocation']) ? 'is-active' : 'is-inactive' ?>">
+                            <?= esc(! empty($row['is_convocation']) ? lang('Backoffice.yes') : lang('Backoffice.no')) ?>
+                        </span>
+                    </td>
+                    <td>
+                        <span class="bo-status-pill <?= ! empty($row['is_audience']) ? 'is-active' : 'is-inactive' ?>">
+                            <?= esc(! empty($row['is_audience']) ? lang('Backoffice.yes') : lang('Backoffice.no')) ?>
+                        </span>
+                    </td>
                     <td><span class="bo-status-pill <?= $row['is_active'] ? 'is-active' : 'is-inactive' ?>"><?= esc($row['status']) ?></span></td>
                     <td>
                         <div class="bo-action-group">

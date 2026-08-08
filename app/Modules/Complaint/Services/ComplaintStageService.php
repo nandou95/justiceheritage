@@ -37,10 +37,10 @@ class ComplaintStageService
     /**
      * @return list<array<string, mixed>>
      */
-    public function list(?bool $isActive = null): array
+    public function list(?bool $isActive = null, ?int $niveauId = null): array
     {
         try {
-            $rows = $this->stages->listWithCounts($isActive);
+            $rows = $this->stages->listWithCounts($isActive, $niveauId);
         } catch (\Throwable $e) {
             log_message('error', 'Failed to list complaint stages: {message}', ['message' => $e->getMessage()]);
 
@@ -57,8 +57,8 @@ class ComplaintStageService
                 'niveau_id'       => (int) ($row['niveau_juridiction_id'] ?? 0),
                 'profiles_count'  => (int) ($row['profiles_count'] ?? 0),
                 'actions_count'   => (int) ($row['actions_count'] ?? 0),
-                'is_convocation'  => filter_var($row['is_convocation'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                'is_audience'     => filter_var($row['is_audience'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'is_convocation'  => db_bool($row['is_convocation'] ?? false),
+                'is_audience'     => db_bool($row['is_audience'] ?? false),
                 'is_active'       => $active,
                 'status'          => $active ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
             ];
@@ -127,6 +127,26 @@ class ComplaintStageService
                 'status'      => $active ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
             ];
         }, $rows);
+    }
+
+    /**
+     * @return array{id:int,description:string,is_active:bool,status:string}|null
+     */
+    public function findAction(int $etapeId, int $actionId): ?array
+    {
+        $row = $this->stageActions->find($actionId);
+        if (! is_array($row) || (int) ($row['etape_plainte_id'] ?? 0) !== $etapeId) {
+            return null;
+        }
+
+        $active = db_bool($row['is_active'] ?? false);
+
+        return [
+            'id'          => (int) $row['etape_plainte_action_id'],
+            'description' => (string) ($row['desc_etape_plainte_action'] ?? ''),
+            'is_active'   => $active,
+            'status'      => $active ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
+        ];
     }
 
     /**
@@ -199,6 +219,56 @@ class ComplaintStageService
 
     /**
      * @param array<string, mixed> $input
+     * @return array{ok:bool,errors?:list<string>,action?:array{id:int,description:string,is_active:bool,status:string}}
+     */
+    public function updateAction(int $etapeId, int $actionId, array $input): array
+    {
+        $row = $this->stageActions->find($actionId);
+        if (! $row || (int) ($row['etape_plainte_id'] ?? 0) !== $etapeId) {
+            return ['ok' => false, 'errors' => [lang('Backoffice.cs_action_err_not_found')]];
+        }
+
+        $description = trim((string) ($input['desc_etape_plainte_action'] ?? ''));
+        if ($description === '') {
+            return ['ok' => false, 'errors' => [lang('Backoffice.cs_action_err_description')]];
+        }
+
+        $isActive = $this->toBool($input['is_active'] ?? false);
+        $payload  = [
+            'desc_etape_plainte_action' => $description,
+            'is_active'                 => $isActive,
+        ];
+
+        try {
+            $this->stageActions->update($actionId, $payload);
+        } catch (\Throwable $e) {
+            log_message('error', 'Failed to update stage action {id}: {message}', [
+                'id'      => $actionId,
+                'message' => $e->getMessage(),
+            ]);
+
+            return ['ok' => false, 'errors' => [
+                lang('Backoffice.cs_action_err_save') . ' ' . $e->getMessage(),
+            ]];
+        }
+
+        $this->audit->record('UPDATE', 'plainte.etape_plainte_action', $actionId, $row, $payload, $this->actorId());
+
+        $action = $this->findAction($etapeId, $actionId);
+        if ($action === null) {
+            $action = [
+                'id'          => $actionId,
+                'description' => $description,
+                'is_active'   => $isActive,
+                'status'      => $isActive ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
+            ];
+        }
+
+        return ['ok' => true, 'action' => $action];
+    }
+
+    /**
+     * @param array<string, mixed> $input
      * @return array{ok:bool,errors?:list<string>,id?:int}
      */
     public function create(array $input): array
@@ -210,6 +280,7 @@ class ComplaintStageService
 
         $data = $this->mapWritable($input) + ['is_active' => true];
         $profilIds = $this->extractProfilIds($input);
+        $actions   = $this->extractActions($input);
 
         $db = db_connect();
         $db->transStart();
@@ -219,7 +290,20 @@ class ComplaintStageService
             if (! $id) {
                 throw new \RuntimeException('insert failed');
             }
-            $this->stageProfiles->syncForEtape((int) $id, $profilIds);
+            $etapeId = (int) $id;
+            $this->stageProfiles->syncForEtape($etapeId, $profilIds);
+
+            foreach ($actions as $action) {
+                $actionId = $this->stageActions->insert([
+                    'etape_plainte_id'          => $etapeId,
+                    'desc_etape_plainte_action' => $action['desc_etape_plainte_action'],
+                    'is_active'                 => $action['is_active'],
+                ], true);
+                if (! $actionId) {
+                    throw new \RuntimeException('action insert failed');
+                }
+            }
+
             $db->transComplete();
         } catch (\Throwable $e) {
             $db->transRollback();
@@ -232,7 +316,14 @@ class ComplaintStageService
             return ['ok' => false, 'errors' => [lang('Backoffice.cs_err_save')]];
         }
 
-        $this->audit->record('CREATE', 'plainte.etape_plainte', (int) $id, null, $data + ['profil_ids' => $profilIds], $this->actorId());
+        $this->audit->record(
+            'CREATE',
+            'plainte.etape_plainte',
+            (int) $id,
+            null,
+            $data + ['profil_ids' => $profilIds, 'actions' => $actions],
+            $this->actorId()
+        );
 
         return ['ok' => true, 'id' => (int) $id];
     }
@@ -359,6 +450,39 @@ class ComplaintStageService
             'is_convocation'            => $this->toBool($input['is_convocation'] ?? false),
             'is_audience'               => $this->toBool($input['is_audience'] ?? false),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     * @return list<array{desc_etape_plainte_action:string,is_active:bool}>
+     */
+    private function extractActions(array $input): array
+    {
+        $raw = $input['actions'] ?? [];
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $actions = [];
+        foreach ($raw as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $description = trim((string) ($row['desc_etape_plainte_action'] ?? ''));
+            if ($description === '') {
+                continue;
+            }
+
+            $actions[] = [
+                'desc_etape_plainte_action' => $description,
+                'is_active'                 => array_key_exists('is_active', $row)
+                    ? $this->toBool($row['is_active'])
+                    : true,
+            ];
+        }
+
+        return $actions;
     }
 
     /**

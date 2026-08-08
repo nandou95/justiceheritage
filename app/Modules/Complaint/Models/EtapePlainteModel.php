@@ -22,7 +22,7 @@ class EtapePlainteModel extends Model
     /**
      * @return list<array<string, mixed>>
      */
-    public function listWithCounts(?bool $isActive = null): array
+    public function listWithCounts(?bool $isActive = null, ?int $niveauId = null): array
     {
         $sql = <<<'SQL'
             SELECT
@@ -46,6 +46,10 @@ class EtapePlainteModel extends Model
         SQL;
 
         $params = [];
+        if ($niveauId !== null && $niveauId > 0) {
+            $sql .= ' AND e.niveau_juridiction_id = ?';
+            $params[] = $niveauId;
+        }
         if ($isActive === true) {
             $sql .= ' AND e.is_active = TRUE';
         } elseif ($isActive === false) {
@@ -53,7 +57,7 @@ class EtapePlainteModel extends Model
         }
 
         $sql .= ' GROUP BY e.etape_plainte_id, e.description_etape_plainte, e.niveau_juridiction_id, e.is_active, e.is_convocation, e.is_audience, nj.desc_niveau_juridiction';
-        $sql .= ' ORDER BY nj.desc_niveau_juridiction ASC NULLS LAST, e.description_etape_plainte ASC';
+        $sql .= ' ORDER BY e.niveau_juridiction_id ASC NULLS LAST, e.description_etape_plainte ASC';
 
         return $this->db->query($sql, $params)->getResultArray();
     }

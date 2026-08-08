@@ -2,7 +2,10 @@
 
 namespace Modules\Complaint\Controllers;
 
+use CodeIgniter\HTTP\ResponseInterface;
+use Modules\Complaint\Models\StatutPlainteModel;
 use Modules\Complaint\Services\ComplaintStatusService;
+use Modules\CourtJurisdiction\Models\NiveauJuridictionModel;
 
 class ComplaintStatuses extends \App\Controllers\BaseController
 {
@@ -16,17 +19,24 @@ class ComplaintStatuses extends \App\Controllers\BaseController
     public function index()
     {
         $status   = $this->request->getGet('status');
+        $niveauId = $this->request->getGet('niveau_juridiction_id');
         $isActive = null;
         if ($status === '1' || $status === 'true') {
             $isActive = true;
         } elseif ($status === '0' || $status === 'false') {
             $isActive = false;
         }
+        $niveau = ($niveauId !== null && $niveauId !== '') ? (int) $niveauId : null;
 
         return view('Modules\Complaint\Views\statuses\index', [
-            'title'  => lang('Backoffice.cst_title'),
-            'active' => 'complaint-statuses',
-            'items'  => $this->service->list($isActive),
+            'title'   => lang('Backoffice.cst_title'),
+            'active'  => 'complaint-statuses',
+            'items'   => $this->service->list($niveau && $niveau > 0 ? $niveau : null, $isActive),
+            'filters' => [
+                'status'                => $status,
+                'niveau_juridiction_id' => $niveauId,
+            ],
+            'levels' => (new NiveauJuridictionModel())->options(),
             'status' => $status,
             'user'   => [
                 'name' => lang('Backoffice.user_sample'),
@@ -66,5 +76,19 @@ class ComplaintStatuses extends \App\Controllers\BaseController
             'success',
             ($result['activated'] ?? false) ? lang('Backoffice.cst_activated') : lang('Backoffice.cst_deactivated')
         );
+    }
+
+    public function optionsJson(): ResponseInterface
+    {
+        $niveauId = (int) ($this->request->getGet('niveau_juridiction_id') ?? 0);
+        $active   = $this->request->getGet('active');
+        $activeOnly = ! ($active === '0' || $active === 'false');
+
+        $options = (new StatutPlainteModel())->options($niveauId > 0 ? $niveauId : null, $activeOnly);
+
+        return $this->response->setJSON([
+            'ok'      => true,
+            'options' => $options,
+        ]);
     }
 }

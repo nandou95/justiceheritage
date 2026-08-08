@@ -16,15 +16,68 @@
 <body class="bo-body">
     <?php
     $locale = service('request')->getLocale();
-    $sessionUser = session('backoffice_user');
-    if (is_array($sessionUser) && ! empty($sessionUser['name'])) {
-        $user = [
-            'name' => (string) $sessionUser['name'],
-            'role' => (string) ($sessionUser['email'] ?? ($user['role'] ?? 'Staff')),
-        ];
-    } else {
-        $user = $user ?? ['name' => 'Officer', 'role' => 'Staff'];
+    $currentUserId = (int) (session('backoffice_user_id') ?? 0);
+    $topbarProfile = null;
+    $unreadCount = 0;
+    $unreadNotifications = [];
+
+    if ($currentUserId > 0) {
+        try {
+            $topbarProfile = (new \Modules\Administration\Models\UtilisateurModel())->findWithRelations($currentUserId);
+        } catch (Throwable $e) {
+            $topbarProfile = null;
+        }
+        try {
+            $inbox = new \Modules\Notification\Services\InboxNotificationService();
+            $unreadCount = $inbox->unreadCount($currentUserId);
+            $unreadNotifications = $inbox->unreadForUser($currentUserId, 8);
+        } catch (Throwable $e) {
+            $unreadCount = 0;
+            $unreadNotifications = [];
+        }
     }
+
+    $sessionUser = session('backoffice_user');
+    $displayName = '';
+    if (is_array($topbarProfile)) {
+        $displayName = trim(($topbarProfile['prenom_utilisateur'] ?? '') . ' ' . ($topbarProfile['nom_utilisateur'] ?? ''));
+    }
+    if ($displayName === '' && is_array($sessionUser)) {
+        $displayName = (string) ($sessionUser['name'] ?? '');
+    }
+    if ($displayName === '') {
+        $displayName = (string) (($user['name'] ?? '') ?: lang('Backoffice.user_sample'));
+    }
+    $displayRole = is_array($topbarProfile)
+        ? (string) ($topbarProfile['libelle_profil'] ?? '')
+        : (string) (($sessionUser['email'] ?? '') ?: ($user['role'] ?? ''));
+    $statusLabel = (string) ($topbarProfile['desc_statut_compte'] ?? '—');
+    $statusActive = stripos($statusLabel, 'actif') !== false || stripos($statusLabel, 'active') !== false;
+    $fmtTopbarDate = static function ($value, string $format = 'd/m/Y H:i'): string {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '—';
+        }
+        $ts = strtotime($value);
+
+        return $ts ? date($format, $ts) : $value;
+    };
+    $topbarInitials = static function (string $name): string {
+        $parts = preg_split('/\s+/u', trim($name)) ?: [];
+        $letters = '';
+        foreach ($parts as $part) {
+            if ($part === '') {
+                continue;
+            }
+            $letters .= mb_strtoupper(mb_substr($part, 0, 1));
+            if (mb_strlen($letters) >= 2) {
+                break;
+            }
+        }
+
+        return $letters !== '' ? $letters : 'U';
+    };
+    $initial = $topbarInitials($displayName);
     $active = $active ?? 'dashboard';
     $icon = static function (string $name): string {
         $map = [
@@ -98,10 +151,6 @@
                     <button class="bo-menu-btn" type="button" data-bo-toggle aria-expanded="false" aria-controls="bo-sidebar-nav">
                         <?= esc(lang('Backoffice.menu')) ?>
                     </button>
-                    <a class="bo-back" href="<?= site_url('backoffice') ?>">
-                        <span class="bo-ico"><?= $icon('back') ?></span>
-                        <?= esc(lang('Backoffice.back_dashboard')) ?>
-                    </a>
                 </div>
 
                 <label class="bo-search">
@@ -114,17 +163,111 @@
                         <a href="<?= site_url('lang/en') ?>" <?= $locale === 'en' ? 'aria-current="true"' : '' ?>>EN</a>
                         <a href="<?= site_url('lang/fr') ?>" <?= $locale === 'fr' ? 'aria-current="true"' : '' ?>>FR</a>
                     </nav>
-                    <button class="bo-icon-btn" type="button" aria-label="<?= esc(lang('Backoffice.help')) ?>"><?= $icon('help') ?></button>
-                    <button class="bo-icon-btn" type="button" aria-label="<?= esc(lang('Backoffice.notifications')) ?>">
-                        <?= $icon('bell') ?>
-                        <span class="bo-badge" aria-hidden="true">3</span>
-                    </button>
-                    <div class="bo-userchip">
-                        <div>
-                            <strong><?= esc($user['name']) ?></strong>
-                            <small><?= esc($user['role']) ?></small>
+
+                    <div class="dropdown bo-top-dropdown" data-bo-notif-dropdown>
+                        <button
+                            class="bo-icon-btn dropdown-toggle"
+                            type="button"
+                            id="boNotifDropdown"
+                            data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside"
+                            aria-expanded="false"
+                            aria-label="<?= esc(lang('Backoffice.notifications'), 'attr') ?>"
+                        >
+                            <?= $icon('bell') ?>
+                            <span class="bo-badge<?= $unreadCount > 0 ? '' : ' d-none' ?>" data-bo-notif-badge aria-hidden="true"><?= (int) $unreadCount ?></span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end bo-notif-menu" aria-labelledby="boNotifDropdown">
+                            <div class="bo-notif-menu-head">
+                                <strong><?= esc(lang('Backoffice.inbox_unread_title')) ?></strong>
+                                <span class="bo-notif-count-pill<?= $unreadCount > 0 ? '' : ' d-none is-empty' ?>" data-bo-notif-count-label><?= (int) $unreadCount ?></span>
+                            </div>
+                            <div class="bo-notif-list" data-bo-notif-list>
+                                <?php if ($unreadNotifications === []): ?>
+                                    <div class="bo-notif-empty" data-bo-notif-empty><?= esc(lang('Backoffice.inbox_no_unread')) ?></div>
+                                <?php else: ?>
+                                    <?php foreach ($unreadNotifications as $n): ?>
+                                        <a class="bo-notif-item" href="<?= esc($n['url']) ?>" data-bo-notif-item data-id="<?= (int) $n['id'] ?>">
+                                            <div class="bo-notif-item-top">
+                                                <strong><?= esc($n['subject']) ?></strong>
+                                                <span class="bo-notif-channel"><?= esc($n['channel']) ?></span>
+                                            </div>
+                                            <p><?= esc($n['preview']) ?></p>
+                                            <small><?= esc($n['created_fmt']) ?></small>
+                                        </a>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                            <div class="bo-notif-menu-foot">
+                                <a href="<?= site_url('backoffice/my/notifications') ?>"><?= esc(lang('Backoffice.inbox_view_all')) ?></a>
+                            </div>
                         </div>
-                        <span class="bo-avatar" aria-hidden="true"><?= esc(mb_substr($user['name'], 0, 1)) ?></span>
+                    </div>
+
+                    <div class="dropdown bo-top-dropdown" data-bo-user-dropdown>
+                        <button
+                            class="bo-userchip dropdown-toggle"
+                            type="button"
+                            id="boUserDropdown"
+                            data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside"
+                            aria-expanded="false"
+                            aria-label="<?= esc(lang('Backoffice.account_profile_title'), 'attr') ?>"
+                        >
+                            <div class="text-start">
+                                <strong><?= esc($displayName) ?></strong>
+                                <small><?= esc($displayRole !== '' ? $displayRole : '—') ?></small>
+                            </div>
+                            <span class="bo-avatar" aria-hidden="true"><?= esc($initial) ?></span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end bo-user-panel" aria-labelledby="boUserDropdown">
+                            <div class="bo-user-panel-hero">
+                                <span class="bo-avatar bo-avatar-xl" aria-hidden="true"><?= esc($initial) ?></span>
+                                <div class="bo-user-panel-identity">
+                                    <strong><?= esc($displayName) ?></strong>
+                                    <div class="bo-user-panel-badges">
+                                        <span class="bo-role-chip"><?= esc($displayRole !== '' ? $displayRole : '—') ?></span>
+                                        <span class="bo-status-pill <?= $statusActive ? 'is-active' : 'is-inactive' ?>"><?= esc($statusLabel) ?></span>
+                                    </div>
+                                    <p class="bo-user-panel-court">
+                                        <i class="bi bi-building" aria-hidden="true"></i>
+                                        <?= esc($topbarProfile['nom_juridiction'] ?? '—') ?>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="bo-user-panel-grid">
+                                <section class="bo-user-panel-card">
+                                    <h3><?= esc(lang('Backoffice.account_section_personal')) ?></h3>
+                                    <dl>
+                                        <div><dt><?= esc(lang('Backoffice.users_field_cni')) ?></dt><dd><?= esc($topbarProfile['numero_cni'] ?? '—') ?></dd></div>
+                                        <div><dt><?= esc(lang('Backoffice.users_field_matricule')) ?></dt><dd><?= esc($topbarProfile['numero_matricule'] ?? '—') ?></dd></div>
+                                        <div><dt><?= esc(lang('Backoffice.users_field_sex')) ?></dt><dd><?= esc($topbarProfile['description_sexe'] ?? '—') ?></dd></div>
+                                        <div><dt><?= esc(lang('Backoffice.users_field_birth_date')) ?></dt><dd><?= esc($fmtTopbarDate($topbarProfile['date_naissance'] ?? '', 'd/m/Y')) ?></dd></div>
+                                        <div><dt><?= esc(lang('Backoffice.users_field_phone')) ?></dt><dd><?= esc($topbarProfile['telephone'] ?? '—') ?></dd></div>
+                                        <div><dt><?= esc(lang('Backoffice.users_field_email')) ?></dt><dd><?= esc($topbarProfile['email'] ?? '—') ?></dd></div>
+                                    </dl>
+                                </section>
+                                <section class="bo-user-panel-card">
+                                    <h3><?= esc(lang('Backoffice.account_section_professional')) ?></h3>
+                                    <dl>
+                                        <div><dt><?= esc(lang('Backoffice.users_field_profile')) ?></dt><dd><?= esc($displayRole !== '' ? $displayRole : '—') ?></dd></div>
+                                        <div><dt><?= esc(lang('Backoffice.users_field_jurisdiction')) ?></dt><dd><?= esc($topbarProfile['nom_juridiction'] ?? '—') ?></dd></div>
+                                        <div><dt><?= esc(lang('Backoffice.filter_jurisdiction_level')) ?></dt><dd><?= esc($topbarProfile['desc_niveau_juridiction'] ?? '—') ?></dd></div>
+                                        <div><dt><?= esc(lang('Backoffice.account_created_at')) ?></dt><dd><?= esc($fmtTopbarDate($topbarProfile['created_at'] ?? '')) ?></dd></div>
+                                        <div><dt><?= esc(lang('Backoffice.account_last_login')) ?></dt><dd><?= esc($fmtTopbarDate($topbarProfile['derniere_connexion'] ?? '')) ?></dd></div>
+                                    </dl>
+                                </section>
+                            </div>
+
+                            <div class="bo-user-panel-actions">
+                                <a href="<?= site_url('backoffice/my/profile') ?>"><i class="bi bi-person" aria-hidden="true"></i> <?= esc(lang('Backoffice.account_my_profile')) ?></a>
+                                <a href="<?= site_url('backoffice/my/profile/edit') ?>"><i class="bi bi-pencil-square" aria-hidden="true"></i> <?= esc(lang('Backoffice.account_edit_profile')) ?></a>
+                                <a href="<?= site_url('backoffice/my/password') ?>"><i class="bi bi-shield-lock" aria-hidden="true"></i> <?= esc(lang('Backoffice.account_change_password')) ?></a>
+                                <a href="<?= site_url('backoffice/my/notifications') ?>"><i class="bi bi-bell" aria-hidden="true"></i> <?= esc(lang('Backoffice.account_my_notifications')) ?></a>
+                                <a class="is-danger" href="<?= site_url('backoffice/logout') ?>"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> <?= esc(lang('Backoffice.logout')) ?></a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -187,6 +330,15 @@
             filesLabel: <?= json_encode(lang('Backoffice.confirm_files_label')) ?>,
             noFile: <?= json_encode(lang('Backoffice.confirm_no_file')) ?>,
             checkedCount: <?= json_encode(lang('Backoffice.confirm_checked_count')) ?>
+        };
+        window.JH_TOPBAR_I18N = {
+            unreadUrl: <?= json_encode(site_url('backoffice/my/notifications/unread-json')) ?>,
+            countUrl: <?= json_encode(site_url('backoffice/my/notifications/count-json')) ?>,
+            markReadUrl: <?= json_encode(site_url('backoffice/my/notifications/__ID__/read')) ?>,
+            viewAllUrl: <?= json_encode(site_url('backoffice/my/notifications')) ?>,
+            noUnread: <?= json_encode(lang('Backoffice.inbox_no_unread')) ?>,
+            csrfName: <?= json_encode(csrf_token()) ?>,
+            csrfHash: <?= json_encode(csrf_hash()) ?>
         };
     </script>
     <script src="<?= public_asset('assets/vendor/jquery/jquery.min.js') ?>"></script>

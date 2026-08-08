@@ -25,6 +25,8 @@ class PersonneModel extends Model
         'commune_naissance_id',
         'zone_naissance_id',
         'colline_naissance_id',
+        'user_name',
+        'mot_de_passe_hash',
     ];
 
     /**
@@ -186,6 +188,16 @@ class PersonneModel extends Model
     public function cniExists(string $cni, ?int $ignoreId = null): bool
     {
         $builder = $this->builder()->where('numero_cni', $cni);
+        if ($ignoreId !== null) {
+            $builder->where('personne_id !=', $ignoreId);
+        }
+
+        return $builder->countAllResults() > 0;
+    }
+
+    public function usernameExists(string $username, ?int $ignoreId = null): bool
+    {
+        $builder = $this->builder()->where('user_name', $username);
         if ($ignoreId !== null) {
             $builder->where('personne_id !=', $ignoreId);
         }

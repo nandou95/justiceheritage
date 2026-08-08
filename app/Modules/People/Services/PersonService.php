@@ -133,6 +133,13 @@ class PersonService
 
         $data = $this->mapWritable($input) + ['upload_cni' => $uploadPath];
 
+        $username = trim((string) ($input['username'] ?? ''));
+        $password = (string) ($input['password'] ?? '');
+        if ($username !== '' && $password !== '') {
+            $data['user_name']         = $username;
+            $data['mot_de_passe_hash'] = password_hash($password, PASSWORD_DEFAULT);
+        }
+
         try {
             $id = $this->people->insert($data, true);
         } catch (Throwable $e) {
@@ -148,7 +155,13 @@ class PersonService
             return ['ok' => false, 'errors' => [lang('Backoffice.people_err_save')]];
         }
 
-        $this->audit->record('CREATE', 'plaignant.personne', (int) $id, null, $data, $this->actorId());
+        $auditData = $data;
+        unset($auditData['mot_de_passe_hash']);
+        $this->audit->record('CREATE', 'plaignant.personne', (int) $id, null, $auditData, $this->actorId());
+
+        if ($username !== '' && $password !== '') {
+            $this->sendPortalWelcomeEmail($data, $username, $password);
+        }
 
         return ['ok' => true, 'id' => (int) $id];
     }
@@ -309,7 +322,85 @@ class PersonService
         $fileErrors = $this->validateCniFile($cniFile, $fileRequired);
         $errors     = array_merge($errors, $fileErrors);
 
+        // Account credentials are optional on create: validate only when any field is provided.
+        if ($ignoreId === null) {
+            $errors = array_merge($errors, $this->validateOptionalAccount($input));
+        }
+
         return $errors;
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     * @return list<string>
+     */
+    private function validateOptionalAccount(array $input): array
+    {
+        $username = trim((string) ($input['username'] ?? ''));
+        $password = (string) ($input['password'] ?? '');
+        $confirm  = (string) ($input['password_confirm'] ?? '');
+        $anyFilled = $username !== '' || $password !== '' || $confirm !== '';
+
+        if (! $anyFilled) {
+            return [];
+        }
+
+        $errors = [];
+
+        if ($username === '' || $password === '' || $confirm === '') {
+            $errors[] = lang('Backoffice.people_err_account_partial');
+        }
+
+        if ($username !== '' && (strlen($username) < 3 || strlen($username) > 100)) {
+            $errors[] = lang('Backoffice.people_err_username');
+        } elseif ($username !== '' && $this->people->usernameExists($username)) {
+            $errors[] = lang('Backoffice.people_err_username_taken');
+        }
+
+        if ($password !== '' && (strlen($password) < 8 || strlen($password) > 72)) {
+            $errors[] = lang('Backoffice.people_err_password_min');
+        }
+
+        if ($password !== '' && $confirm !== '' && ! hash_equals($password, $confirm)) {
+            $errors[] = lang('Backoffice.people_err_password_match');
+        }
+
+        return $errors;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function sendPortalWelcomeEmail(array $data, string $username, string $password): void
+    {
+        $email = trim((string) ($data['email'] ?? ''));
+        if ($email === '') {
+            return;
+        }
+
+        $name = trim(($data['prenom_personne'] ?? '') . ' ' . ($data['nom_personne'] ?? ''));
+        $mailer = service('notifications');
+
+        try {
+            $sent = $mailer->sendAccountRegistration(
+                $email,
+                $name !== '' ? $name : $email,
+                $username,
+                $password,
+                site_url('login')
+            );
+            if (! $sent) {
+                log_message('error', 'Portal welcome email failed for person {email}: {error}', [
+                    'email' => $email,
+                    'error' => $mailer->getLastError(),
+                ]);
+            }
+        } catch (Throwable $e) {
+            log_message('error', 'Portal welcome email threw for person {email}: {error}', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

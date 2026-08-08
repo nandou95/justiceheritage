@@ -89,6 +89,63 @@ $isAudience = old('is_audience') !== null ? (bool) old('is_audience') : filter_v
                     <label class="form-check-label" for="is_audience"><?= esc(lang('Backoffice.cs_field_audience')) ?></label>
                 </div>
             </div>
+
+            <?php if (! $isEdit): ?>
+                <?php
+                $actionRows = old('actions');
+                if (! is_array($actionRows) || $actionRows === []) {
+                    $actionRows = [['desc_etape_plainte_action' => '', 'is_active' => '1']];
+                }
+                ?>
+                <div class="col-12">
+                    <hr class="bo-form-divider">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <h2 class="h6 mb-0"><?= esc(lang('Backoffice.cs_actions_title')) ?></h2>
+                        <button class="btn btn-bo-secondary btn-sm" type="button" data-cs-action-add>
+                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                            <?= esc(lang('Backoffice.cs_action_add')) ?>
+                        </button>
+                    </div>
+                    <p class="form-text mb-3"><?= esc(lang('Backoffice.cs_actions_create_hint')) ?></p>
+                    <div class="bo-cs-action-rows" data-cs-action-rows>
+                        <?php foreach ($actionRows as $index => $actionRow): ?>
+                            <?php
+                            $actionDesc = is_array($actionRow)
+                                ? (string) ($actionRow['desc_etape_plainte_action'] ?? '')
+                                : '';
+                            $actionActive = is_array($actionRow)
+                                ? (($actionRow['is_active'] ?? '1') === '1'
+                                    || ($actionRow['is_active'] ?? true) === true
+                                    || ($actionRow['is_active'] ?? '') === 'true'
+                                    || ($actionRow['is_active'] ?? '') === 'on')
+                                : true;
+                            ?>
+                            <div class="bo-cs-action-row row g-2 align-items-end mb-2" data-cs-action-row>
+                                <div class="col-12 col-md-7">
+                                    <label class="form-label"><?= esc(lang('Backoffice.cs_action_field_description')) ?></label>
+                                    <input class="form-control" type="text" name="actions[<?= (int) $index ?>][desc_etape_plainte_action]"
+                                           value="<?= esc($actionDesc) ?>" maxlength="255"
+                                           placeholder="<?= esc(lang('Backoffice.cs_action_field_description'), 'attr') ?>">
+                                </div>
+                                <div class="col-8 col-md-3">
+                                    <label class="form-label"><?= esc(lang('Backoffice.cs_action_field_status')) ?></label>
+                                    <select class="form-select" name="actions[<?= (int) $index ?>][is_active]">
+                                        <option value="1" <?= $actionActive ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_active')) ?></option>
+                                        <option value="0" <?= ! $actionActive ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_inactive')) ?></option>
+                                    </select>
+                                </div>
+                                <div class="col-4 col-md-2">
+                                    <button class="btn btn-bo-icon is-danger w-100" type="button" data-cs-action-remove
+                                            data-bs-toggle="tooltip" title="<?= esc(lang('Backoffice.cs_action_remove'), 'attr') ?>">
+                                        <i class="bi bi-trash" aria-hidden="true"></i>
+                                        <span class="visually-hidden"><?= esc(lang('Backoffice.cs_action_remove')) ?></span>
+                                    </button>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
         <div class="bo-form-actions mt-4">
             <button class="btn btn-bo-primary" type="submit">
@@ -149,6 +206,58 @@ $isAudience = old('is_audience') !== null ? (bool) old('is_audience') : filter_v
     form.classList.add("was-validated");
     markProfilesValidity();
   });
+
+  const actionRows = form.querySelector("[data-cs-action-rows]");
+  if (actionRows) {
+    const reindexActions = () => {
+      actionRows.querySelectorAll("[data-cs-action-row]").forEach((row, index) => {
+        row.querySelectorAll("input, select").forEach((el) => {
+          if (!el.name) {
+            return;
+          }
+          el.name = el.name.replace(/actions\[\d+]/, `actions[${index}]`);
+        });
+      });
+    };
+
+    const bindActionRow = (row) => {
+      row.querySelector("[data-cs-action-remove]")?.addEventListener("click", () => {
+        const rows = actionRows.querySelectorAll("[data-cs-action-row]");
+        if (rows.length <= 1) {
+          row.querySelectorAll("input").forEach((el) => {
+            el.value = "";
+          });
+          const status = row.querySelector("select");
+          if (status) {
+            status.value = "1";
+          }
+          return;
+        }
+        row.remove();
+        reindexActions();
+      });
+    };
+
+    actionRows.querySelectorAll("[data-cs-action-row]").forEach(bindActionRow);
+
+    form.querySelector("[data-cs-action-add]")?.addEventListener("click", () => {
+      const first = actionRows.querySelector("[data-cs-action-row]");
+      if (!first) {
+        return;
+      }
+      const clone = first.cloneNode(true);
+      clone.querySelectorAll("input").forEach((el) => {
+        el.value = "";
+      });
+      const status = clone.querySelector("select");
+      if (status) {
+        status.value = "1";
+      }
+      actionRows.appendChild(clone);
+      bindActionRow(clone);
+      reindexActions();
+    });
+  }
 })();
 </script>
 <?= $this->endSection() ?>

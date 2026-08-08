@@ -144,7 +144,7 @@ class BackofficeComplaintService
         }
 
         $niveauId  = (int) $input['niveau_juridiction_id'];
-        $statusId  = $this->statuses->findDefaultId();
+        $statusId  = $this->statuses->findDefaultId($niveauId);
         $stageOpts = $this->stages->options($niveauId, true);
         $stageId   = $stageOpts[0]['id'] ?? null;
 

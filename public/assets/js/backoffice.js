@@ -110,6 +110,19 @@
     const pageLength = Number(table.dataset.pageLength || 10);
     const orderCol = Number(table.dataset.orderCol ?? -1);
     const orderDir = table.dataset.orderDir || "desc";
+    let order = [];
+    if (table.dataset.order) {
+      try {
+        const parsed = JSON.parse(table.dataset.order);
+        if (Array.isArray(parsed)) {
+          order = parsed;
+        }
+      } catch (_err) {
+        order = [];
+      }
+    } else if (orderCol >= 0) {
+      order = [[orderCol, orderDir]];
+    }
 
     const orderableTargets = [];
     const searchableTargets = [];
@@ -134,7 +147,7 @@
       language: dtLang,
       pageLength,
       autoWidth: false,
-      order: orderCol >= 0 ? [[orderCol, orderDir]] : [],
+      order,
       columnDefs,
       dom: table.dataset.dom || "lfrtip",
     });
@@ -1238,18 +1251,24 @@
     const message = document.getElementById(messageId);
     const confirmBtn = document.getElementById(confirmId);
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    document.querySelectorAll(toggleSelector).forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-id");
-        const name = btn.getAttribute("data-name") || "";
-        const activate = btn.getAttribute("data-activate") === "1";
-        form.action = i18n.toggleUrl.replace("__ID__", id);
-        title.textContent = activate ? i18n.activateTitle : i18n.deactivateTitle;
-        message.textContent = `${activate ? i18n.activateMessage : i18n.deactivateMessage}${name ? ` (${name})` : ""}`;
-        confirmBtn.textContent = activate ? i18n.activateBtn : i18n.deactivateBtn;
-        confirmBtn.className = `btn ${activate ? "btn-success" : "btn-danger"}`;
-        modal.show();
-      });
+    // Delegate so activate/deactivate still works after AJAX list refreshes.
+    document.addEventListener("click", (event) => {
+      const btn = event.target.closest(toggleSelector);
+      if (!btn || !form || !title || !message || !confirmBtn) {
+        return;
+      }
+      const id = btn.getAttribute("data-id");
+      if (!id) {
+        return;
+      }
+      const name = btn.getAttribute("data-name") || "";
+      const activate = btn.getAttribute("data-activate") === "1";
+      form.action = i18n.toggleUrl.replace("__ID__", id);
+      title.textContent = activate ? i18n.activateTitle : i18n.deactivateTitle;
+      message.textContent = `${activate ? i18n.activateMessage : i18n.deactivateMessage}${name ? ` (${name})` : ""}`;
+      confirmBtn.textContent = activate ? i18n.activateBtn : i18n.deactivateBtn;
+      confirmBtn.className = `btn ${activate ? "btn-success" : "btn-danger"}`;
+      modal.show();
     });
   };
 
@@ -1355,27 +1374,29 @@
       });
     });
 
-    document.querySelectorAll("[data-bo-cjc-edit]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        await resetForm();
-        cjcForm.action = i18n.updateUrl.replace("__ID__", btn.getAttribute("data-id"));
-        title.textContent = i18n.editTitle;
-        submitBtn.textContent = i18n.saveEdit;
-        if (province) province.value = btn.getAttribute("data-province-id") || "";
-        if (niveau) niveau.value = btn.getAttribute("data-niveau-id") || "";
-        if (parentProvince) parentProvince.value = btn.getAttribute("data-parent-province-id") || "";
-        await loadCommunes(province, commune, btn.getAttribute("data-commune-id"));
-        await refreshChildCourts(btn.getAttribute("data-juridiction-id"));
-        await refreshParentLevel();
-        if (parentNiveau && btn.getAttribute("data-parent-niveau-id")) {
-          parentNiveau.value = btn.getAttribute("data-parent-niveau-id");
-          const label = (i18n.niveaux || []).find((n) => String(n.id) === parentNiveau.value)?.label || "";
-          if (parentNiveauLabel) parentNiveauLabel.value = label;
-        }
-        await loadCommunes(parentProvince, parentCommune, btn.getAttribute("data-parent-commune-id"));
-        await refreshParentCourts(btn.getAttribute("data-parent-id"));
-        modal.show();
-      });
+    document.addEventListener("click", async (event) => {
+      const btn = event.target.closest("[data-bo-cjc-edit]");
+      if (!btn) {
+        return;
+      }
+      await resetForm();
+      cjcForm.action = i18n.updateUrl.replace("__ID__", btn.getAttribute("data-id"));
+      title.textContent = i18n.editTitle;
+      submitBtn.textContent = i18n.saveEdit;
+      if (province) province.value = btn.getAttribute("data-province-id") || "";
+      if (niveau) niveau.value = btn.getAttribute("data-niveau-id") || "";
+      if (parentProvince) parentProvince.value = btn.getAttribute("data-parent-province-id") || "";
+      await loadCommunes(province, commune, btn.getAttribute("data-commune-id"));
+      await refreshChildCourts(btn.getAttribute("data-juridiction-id"));
+      await refreshParentLevel();
+      if (parentNiveau && btn.getAttribute("data-parent-niveau-id")) {
+        parentNiveau.value = btn.getAttribute("data-parent-niveau-id");
+        const label = (i18n.niveaux || []).find((n) => String(n.id) === parentNiveau.value)?.label || "";
+        if (parentNiveauLabel) parentNiveauLabel.value = label;
+      }
+      await loadCommunes(parentProvince, parentCommune, btn.getAttribute("data-parent-commune-id"));
+      await refreshParentCourts(btn.getAttribute("data-parent-id"));
+      modal.show();
     });
 
     province?.addEventListener("change", async () => {
@@ -1424,16 +1445,18 @@
         recours.checked = false;
       });
     });
-    document.querySelectorAll("[data-bo-jl-edit]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        form.action = i18n.updateUrl.replace("__ID__", btn.getAttribute("data-id"));
-        form.classList.remove("was-validated");
-        title.textContent = i18n.editTitle;
-        submitBtn.textContent = i18n.saveEdit;
-        description.value = btn.getAttribute("data-description") || "";
-        recours.checked = btn.getAttribute("data-recours") === "1";
-        modal.show();
-      });
+    document.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-bo-jl-edit]");
+      if (!btn || !form) {
+        return;
+      }
+      form.action = i18n.updateUrl.replace("__ID__", btn.getAttribute("data-id"));
+      form.classList.remove("was-validated");
+      title.textContent = i18n.editTitle;
+      submitBtn.textContent = i18n.saveEdit;
+      description.value = btn.getAttribute("data-description") || "";
+      recours.checked = btn.getAttribute("data-recours") === "1";
+      modal.show();
     });
     form?.addEventListener("submit", (event) => {
       if (!form.checkValidity()) {
@@ -1465,16 +1488,18 @@
         parent.value = "";
       });
     });
-    document.querySelectorAll("[data-bo-jlc-edit]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        form.action = i18n.updateUrl.replace("__ID__", btn.getAttribute("data-id"));
-        form.classList.remove("was-validated");
-        title.textContent = i18n.editTitle;
-        submitBtn.textContent = i18n.saveEdit;
-        niveau.value = btn.getAttribute("data-niveau") || "";
-        parent.value = btn.getAttribute("data-parent") || "";
-        modal.show();
-      });
+    document.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-bo-jlc-edit]");
+      if (!btn || !form) {
+        return;
+      }
+      form.action = i18n.updateUrl.replace("__ID__", btn.getAttribute("data-id"));
+      form.classList.remove("was-validated");
+      title.textContent = i18n.editTitle;
+      submitBtn.textContent = i18n.saveEdit;
+      niveau.value = btn.getAttribute("data-niveau") || "";
+      parent.value = btn.getAttribute("data-parent") || "";
+      modal.show();
     });
     form?.addEventListener("submit", (event) => {
       if (!form.checkValidity()) {
@@ -1563,13 +1588,377 @@
       );
     });
 
-    peopleForm.addEventListener("submit", (event) => {
-      if (!peopleForm.checkValidity()) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      peopleForm.classList.add("was-validated");
+    peopleForm.querySelectorAll("[data-password-toggle]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.getAttribute("data-target");
+        const input = targetId ? peopleForm.querySelector(`#${CSS.escape(targetId)}`) : null;
+        if (!input) {
+          return;
+        }
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        const icon = btn.querySelector("i");
+        if (icon) {
+          icon.classList.toggle("bi-eye", !show);
+          icon.classList.toggle("bi-eye-slash", show);
+        }
+        btn.setAttribute(
+          "aria-label",
+          show
+            ? peopleForm.dataset.msgHidePassword || "Hide password"
+            : peopleForm.dataset.msgShowPassword || "Show password"
+        );
+      });
     });
+
+    const wizardRoot = peopleForm.querySelector("[data-wizard]");
+    if (peopleForm.hasAttribute("data-bo-people-wizard") && wizardRoot) {
+      const panes = Array.from(peopleForm.querySelectorAll("[data-wizard-step]"));
+      const indicators = Array.from(peopleForm.querySelectorAll("[data-wizard-indicator]"));
+      const statusEl = peopleForm.querySelector("[data-wizard-status]");
+      const prevBtn = peopleForm.querySelector("[data-wizard-prev]");
+      const nextBtn = peopleForm.querySelector("[data-wizard-next]");
+      const submitBtn = peopleForm.querySelector("[data-wizard-submit]");
+      const totalSteps = panes.length || 1;
+      let currentStep = 1;
+      const progressTpl = window.JH_PEOPLE_WIZARD_I18N?.progress || "Step {0} of {1}";
+
+      const formatProgress = (step) =>
+        String(progressTpl)
+          .replaceAll("{0}", String(step))
+          .replaceAll("{1}", String(totalSteps));
+
+      const paneFields = (pane) =>
+        Array.from(pane.querySelectorAll("input, select, textarea")).filter(
+          (el) => !el.disabled && el.type !== "hidden" && el.type !== "submit" && el.type !== "button"
+        );
+
+      const msgRequired = peopleForm.dataset.msgRequired || "";
+      const msgEmail = peopleForm.dataset.msgEmail || "";
+      const msgMinAge = peopleForm.dataset.msgMinAge || "";
+      const msgPassword = peopleForm.dataset.msgPassword || "";
+      const msgPasswordMatch = peopleForm.dataset.msgPasswordMatch || "";
+      const msgAccountPartial = peopleForm.dataset.msgAccountPartial || "";
+      const msgCniType = peopleForm.dataset.msgCniType || "";
+      const msgCniSize = peopleForm.dataset.msgCniSize || "";
+      const msgNoAccount = peopleForm.dataset.msgNoAccount || "—";
+      const cniMaxBytes = Number(peopleForm.dataset.cniMaxBytes || 0);
+
+      const syncFeedback = (field, message) => {
+        const feedback = field.closest(".col-12, .input-group, .mb-3")?.querySelector(".invalid-feedback")
+          || field.parentElement?.querySelector(".invalid-feedback");
+        if (!feedback) {
+          return;
+        }
+        if (message) {
+          feedback.textContent = message;
+          return;
+        }
+        if (field.validity.valid) {
+          feedback.textContent = msgRequired;
+          return;
+        }
+        if (field.validationMessage) {
+          feedback.textContent = field.validationMessage;
+        } else if (field.validity.valueMissing) {
+          feedback.textContent = msgRequired;
+        }
+      };
+
+      const fieldValue = (field) => {
+        if (field.type === "file") {
+          return field.files && field.files.length ? field.files[0].name : "";
+        }
+        return typeof field.value === "string" ? field.value.trim() : String(field.value || "");
+      };
+
+      const applyFieldRules = (field, { forceRequired = false } = {}) => {
+        if (typeof field.value === "string" && field.type !== "date" && field.tagName !== "SELECT" && field.type !== "file") {
+          field.value = field.value.trim();
+        }
+
+        field.setCustomValidity("");
+
+        if (forceRequired && field.type !== "file" && fieldValue(field) === "") {
+          field.setCustomValidity(msgRequired);
+        }
+        if (forceRequired && field.type === "file" && !(field.files && field.files.length) && field.required) {
+          field.setCustomValidity(msgRequired);
+        }
+
+        if (field.type === "email" && field.value) {
+          const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value);
+          if (!emailOk) {
+            field.setCustomValidity(msgEmail || field.validationMessage || msgRequired);
+          }
+        }
+
+        if (field.id === "date_naissance" && field.value) {
+          const max = field.getAttribute("max");
+          if (max && field.value > max) {
+            field.setCustomValidity(msgMinAge || msgRequired);
+          }
+        }
+
+        if (field.id === "upload_cni" && field.files && field.files[0]) {
+          const file = field.files[0];
+          const name = String(file.name || "").toLowerCase();
+          const okExt = /\.(pdf|jpe?g|png)$/.test(name);
+          if (!okExt) {
+            field.setCustomValidity(msgCniType || msgRequired);
+          } else if (cniMaxBytes > 0 && file.size > cniMaxBytes) {
+            field.setCustomValidity(msgCniSize || msgRequired);
+          }
+        }
+
+        if (field.id === "password" && field.value && field.value.length < 8) {
+          field.setCustomValidity(msgPassword || msgRequired);
+        }
+
+        if (field.id === "password_confirm") {
+          const password = peopleForm.querySelector("#password");
+          if (field.value && password && field.value !== password.value) {
+            field.setCustomValidity(msgPasswordMatch || msgRequired);
+          }
+        }
+
+        if (field.id === "username" && field.value && (field.value.length < 3 || field.value.length > 100)) {
+          field.setCustomValidity(msgRequired);
+        }
+
+        syncFeedback(field);
+      };
+
+      const validateStep = (step) => {
+        const pane = panes.find((p) => Number(p.dataset.wizardStep) === step);
+        if (!pane || pane.hasAttribute("data-wizard-review")) {
+          return true;
+        }
+
+        const fields = paneFields(pane);
+        const optional = pane.getAttribute("data-wizard-optional") === "1";
+        const anyFilled = fields.some((field) => fieldValue(field) !== "");
+
+        if (optional && !anyFilled) {
+          fields.forEach((field) => {
+            field.setCustomValidity("");
+            field.classList.remove("is-invalid");
+            syncFeedback(field);
+          });
+          return true;
+        }
+
+        let valid = true;
+        if (optional && anyFilled) {
+          const username = peopleForm.querySelector("#username");
+          const password = peopleForm.querySelector("#password");
+          const confirm = peopleForm.querySelector("#password_confirm");
+          [username, password, confirm].forEach((field) => {
+            if (!field) {
+              return;
+            }
+            applyFieldRules(field, { forceRequired: true });
+            if (!fieldValue(field) || !field.checkValidity()) {
+              valid = false;
+              field.classList.add("is-invalid");
+              if (!fieldValue(field)) {
+                field.setCustomValidity(msgAccountPartial || msgRequired);
+              }
+              syncFeedback(field, !fieldValue(field) ? msgAccountPartial || msgRequired : undefined);
+            } else {
+              field.classList.remove("is-invalid");
+              syncFeedback(field);
+            }
+          });
+        } else {
+          fields.forEach((field) => {
+            applyFieldRules(field);
+            if (!field.checkValidity()) {
+              valid = false;
+              field.classList.add("is-invalid");
+            } else {
+              field.classList.remove("is-invalid");
+            }
+            syncFeedback(field);
+          });
+        }
+
+        peopleForm.classList.add("was-validated");
+        if (!valid) {
+          const firstInvalid = pane.querySelector(":invalid, .is-invalid");
+          firstInvalid?.focus?.();
+        }
+        return valid;
+      };
+
+      const reviewText = (name) => {
+        const field = peopleForm.querySelector(`[name="${CSS.escape(name)}"]`);
+        if (!field) {
+          return "—";
+        }
+        if (field.tagName === "SELECT" || field.hasAttribute("data-review-label")) {
+          const opt = field.selectedOptions?.[0];
+          return opt && opt.value ? opt.textContent.trim() : "—";
+        }
+        if (field.type === "file") {
+          if (field.files && field.files[0]) {
+            return field.files[0].name;
+          }
+          const existing = peopleForm.querySelector(`a[href*="/cni/view"]`);
+          return existing ? existing.textContent.trim() || "—" : "—";
+        }
+        const value = fieldValue(field);
+        return value || "—";
+      };
+
+      const refreshReview = () => {
+        peopleForm.querySelectorAll("[data-review]").forEach((el) => {
+          const key = el.getAttribute("data-review");
+          if (!key) {
+            return;
+          }
+          if (key === "password_mask") {
+            const password = peopleForm.querySelector("#password");
+            const username = peopleForm.querySelector("#username");
+            const hasAccount = fieldValue(username) !== "" || fieldValue(password) !== "";
+            el.textContent = hasAccount ? "••••••••" : msgNoAccount;
+            return;
+          }
+          if (key === "username") {
+            const username = reviewText("username");
+            el.textContent = username === "—" ? msgNoAccount : username;
+            return;
+          }
+          el.textContent = reviewText(key);
+        });
+      };
+
+      const showStep = (step) => {
+        currentStep = Math.min(Math.max(step, 1), totalSteps);
+        panes.forEach((pane) => {
+          const isActive = Number(pane.dataset.wizardStep) === currentStep;
+          pane.classList.toggle("is-active", isActive);
+          pane.hidden = !isActive;
+        });
+        indicators.forEach((indicator) => {
+          const idx = Number(indicator.dataset.wizardIndicator);
+          indicator.classList.toggle("is-active", idx === currentStep);
+          indicator.classList.toggle("is-complete", idx < currentStep);
+        });
+        if (statusEl) {
+          statusEl.textContent = formatProgress(currentStep);
+        }
+        if (prevBtn) {
+          prevBtn.hidden = currentStep <= 1;
+        }
+        if (nextBtn) {
+          nextBtn.hidden = currentStep >= totalSteps;
+        }
+        if (submitBtn) {
+          submitBtn.hidden = currentStep < totalSteps;
+        }
+        if (currentStep === totalSteps) {
+          refreshReview();
+        }
+      };
+
+      peopleForm.querySelectorAll("input, select, textarea").forEach((field) => {
+        field.addEventListener("input", () => {
+          applyFieldRules(field);
+          if (field.checkValidity()) {
+            field.classList.remove("is-invalid");
+          }
+          syncFeedback(field);
+        });
+        field.addEventListener("change", () => {
+          applyFieldRules(field);
+          if (field.checkValidity()) {
+            field.classList.remove("is-invalid");
+          } else {
+            field.classList.add("is-invalid");
+          }
+          syncFeedback(field);
+        });
+        field.addEventListener("blur", () => {
+          applyFieldRules(field);
+          if (!field.checkValidity()) {
+            field.classList.add("is-invalid");
+          } else {
+            field.classList.remove("is-invalid");
+          }
+          syncFeedback(field);
+        });
+      });
+
+      prevBtn?.addEventListener("click", () => {
+        showStep(currentStep - 1);
+      });
+
+      nextBtn?.addEventListener("click", () => {
+        if (!validateStep(currentStep)) {
+          return;
+        }
+        showStep(currentStep + 1);
+      });
+
+      indicators.forEach((indicator) => {
+        indicator.addEventListener("click", () => {
+          const target = Number(indicator.dataset.wizardIndicator);
+          if (!target || target === currentStep) {
+            return;
+          }
+          if (target < currentStep) {
+            showStep(target);
+            return;
+          }
+          for (let step = currentStep; step < target; step += 1) {
+            if (!validateStep(step)) {
+              showStep(step);
+              return;
+            }
+          }
+          showStep(target);
+        });
+      });
+
+      peopleForm.querySelectorAll("[data-wizard-edit]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const target = Number(btn.getAttribute("data-wizard-edit"));
+          if (target) {
+            showStep(target);
+          }
+        });
+      });
+
+      peopleForm.addEventListener("submit", (event) => {
+        if (currentStep < totalSteps) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (validateStep(currentStep)) {
+            showStep(currentStep + 1);
+          }
+          return;
+        }
+        for (let step = 1; step <= totalSteps; step += 1) {
+          if (!validateStep(step)) {
+            event.preventDefault();
+            event.stopPropagation();
+            showStep(step);
+            return;
+          }
+        }
+      });
+
+      showStep(1);
+    } else {
+      peopleForm.addEventListener("submit", (event) => {
+        if (!peopleForm.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        peopleForm.classList.add("was-validated");
+      });
+    }
   }
 
   // ---- Complaint module UI ----
@@ -1707,12 +2096,12 @@
       return;
     }
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    const title = document.getElementById(modalId.replace("Modal", "Title").replace("Form", "Form"));
     const titleEl = document.getElementById(formId.replace("Form", "FormTitle")) || modalEl.querySelector(".modal-title");
     const submitBtn = document.getElementById(formId.replace("Form", "FormSubmit")) || form.querySelector('[type="submit"]');
 
-    document.querySelectorAll(createSelector).forEach((btn) => {
-      btn.addEventListener("click", () => {
+    document.addEventListener("click", (event) => {
+      const createBtn = event.target.closest(createSelector);
+      if (createBtn) {
         form.action = i18n.storeUrl;
         form.reset();
         form.classList.remove("was-validated");
@@ -1720,18 +2109,19 @@
         if (submitBtn) submitBtn.textContent = i18n.saveCreate;
         fillFn?.(null);
         modal.show();
-      });
-    });
+        return;
+      }
 
-    document.querySelectorAll(editSelector).forEach((btn) => {
-      btn.addEventListener("click", () => {
-        form.action = i18n.updateUrl.replace("__ID__", btn.getAttribute("data-id"));
-        form.classList.remove("was-validated");
-        if (titleEl) titleEl.textContent = i18n.editTitle;
-        if (submitBtn) submitBtn.textContent = i18n.saveEdit;
-        fillFn?.(btn);
-        modal.show();
-      });
+      const editBtn = event.target.closest(editSelector);
+      if (!editBtn) {
+        return;
+      }
+      form.action = i18n.updateUrl.replace("__ID__", editBtn.getAttribute("data-id"));
+      form.classList.remove("was-validated");
+      if (titleEl) titleEl.textContent = i18n.editTitle;
+      if (submitBtn) submitBtn.textContent = i18n.saveEdit;
+      fillFn?.(editBtn);
+      modal.show();
     });
 
     form.addEventListener("submit", (event) => {
@@ -1745,7 +2135,9 @@
 
   bindSimpleCrudModal("cstForm", "cstFormModal", "[data-bo-cst-create]", "[data-bo-cst-edit]", window.JH_CST_I18N, (btn) => {
     const input = document.getElementById("description_statut_plainte");
+    const niveau = document.getElementById("niveau_juridiction_id");
     if (input) input.value = btn ? btn.getAttribute("data-description") || "" : "";
+    if (niveau) niveau.value = btn ? btn.getAttribute("data-niveau") || "" : "";
   });
 
   bindSimpleCrudModal("sumStForm", "sumStFormModal", "[data-bo-sum-st-create]", "[data-bo-sum-st-edit]", window.JH_SUM_ST_I18N, (btn) => {
@@ -1879,8 +2271,10 @@
     const commune = cmpFilters.querySelector('[data-filter="commune"]');
     const niveau = cmpFilters.querySelector('[data-filter="niveau"]');
     const juridiction = cmpFilters.querySelector('[data-filter="juridiction"]');
+    const statusFilter = cmpFilters.querySelector('[data-filter="status"]');
     const apiCommunes = cmpFilters.dataset.apiCommunes || "";
     const apiJurisdictions = cmpFilters.dataset.apiJurisdictions || "";
+    const apiStatuses = cmpFilters.dataset.apiStatuses || "";
 
     const refreshCourts = async () => {
       if (!juridiction || !apiJurisdictions) return;
@@ -1892,6 +2286,14 @@
       fillSelect(juridiction, options, juridiction.options[0]?.textContent || "");
     };
 
+    const refreshStatuses = async () => {
+      if (!statusFilter || !apiStatuses) return;
+      const params = new URLSearchParams({ active: "false" });
+      if (niveau?.value) params.set("niveau_juridiction_id", niveau.value);
+      const options = await fetchOptions(`${apiStatuses}?${params.toString()}`);
+      fillSelect(statusFilter, options, statusFilter.options[0]?.textContent || "");
+    };
+
     province?.addEventListener("change", async () => {
       fillSelect(commune, [], commune?.options[0]?.textContent || "");
       if (juridiction) {
@@ -1901,7 +2303,10 @@
       await refreshCourts();
     });
     commune?.addEventListener("change", refreshCourts);
-    niveau?.addEventListener("change", refreshCourts);
+    niveau?.addEventListener("change", async () => {
+      await refreshCourts();
+      await refreshStatuses();
+    });
   }
 
   const cmpForm = document.querySelector("[data-bo-cmp-form]");
@@ -3026,5 +3431,166 @@
       });
     });
     observer.observe(document.body, { childList: true, subtree: true });
+  })();
+
+  // Top bar: unread notifications dropdown + live badge
+  (() => {
+    const cfg = window.JH_TOPBAR_I18N;
+    const root = document.querySelector("[data-bo-notif-dropdown]");
+    if (!cfg || !root) {
+      return;
+    }
+
+    const badge = root.querySelector("[data-bo-notif-badge]");
+    const countLabel = root.querySelector("[data-bo-notif-count-label]");
+    const listEl = root.querySelector("[data-bo-notif-list]");
+    const toggleBtn = root.querySelector("#boNotifDropdown");
+
+    const escapeHtml = (value) =>
+      String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    const setBadge = (count) => {
+      const n = Math.max(0, Number(count) || 0);
+      if (badge) {
+        badge.textContent = String(n);
+        badge.classList.toggle("d-none", n < 1);
+      }
+      if (countLabel) {
+        countLabel.textContent = String(n);
+        countLabel.classList.toggle("is-empty", n < 1);
+        countLabel.classList.toggle("d-none", n < 1);
+      }
+    };
+
+    const renderList = (notifications) => {
+      if (!listEl) {
+        return;
+      }
+      const items = Array.isArray(notifications) ? notifications : [];
+      if (items.length === 0) {
+        listEl.innerHTML = `<div class="bo-notif-empty" data-bo-notif-empty>${escapeHtml(
+          cfg.noUnread || "No unread notifications."
+        )}</div>`;
+        return;
+      }
+      listEl.innerHTML = items
+        .map(
+          (n) => `
+        <a class="bo-notif-item" href="${escapeHtml(n.url || "#")}" data-bo-notif-item data-id="${Number(n.id) || 0}">
+          <div class="bo-notif-item-top">
+            <strong>${escapeHtml(n.subject || "")}</strong>
+            <span class="bo-notif-channel">${escapeHtml(n.channel || "—")}</span>
+          </div>
+          <p>${escapeHtml(n.preview || "—")}</p>
+          <small>${escapeHtml(n.created_fmt || "")}</small>
+        </a>`
+        )
+        .join("");
+    };
+
+    const refreshUnread = async () => {
+      if (!cfg.unreadUrl) {
+        return;
+      }
+      try {
+        const res = await fetch(cfg.unreadUrl, {
+          headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
+          credentials: "same-origin",
+        });
+        if (!res.ok) {
+          return;
+        }
+        const data = await res.json();
+        if (!data?.ok) {
+          return;
+        }
+        setBadge(data.count);
+        renderList(data.notifications);
+      } catch (_err) {
+        // keep SSR content
+      }
+    };
+
+    const markRead = async (id) => {
+      if (!id || !cfg.markReadUrl) {
+        return null;
+      }
+      const url = String(cfg.markReadUrl).replace("__ID__", String(id));
+      const body = new URLSearchParams();
+      if (cfg.csrfName && cfg.csrfHash) {
+        body.set(cfg.csrfName, cfg.csrfHash);
+      }
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          },
+          credentials: "same-origin",
+          body: body.toString(),
+        });
+        const data = await res.json().catch(() => null);
+        if (data?.csrfHash) {
+          cfg.csrfHash = data.csrfHash;
+        }
+        if (data?.ok) {
+          setBadge(data.count);
+        }
+        return data;
+      } catch (_err) {
+        return null;
+      }
+    };
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener("show.bs.dropdown", () => {
+        refreshUnread();
+      });
+    }
+
+    root.addEventListener("click", async (event) => {
+      const item = event.target.closest("[data-bo-notif-item]");
+      if (!item || !root.contains(item)) {
+        return;
+      }
+      const id = Number(item.getAttribute("data-id") || 0);
+      const href = item.getAttribute("href");
+      if (!id || !href) {
+        return;
+      }
+      event.preventDefault();
+      await markRead(id);
+      window.location.href = href;
+    });
+
+    // Periodic badge refresh while the page stays open
+    window.setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
+      if (!cfg.countUrl) {
+        return;
+      }
+      fetch(cfg.countUrl, {
+        headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
+        credentials: "same-origin",
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.ok) {
+            setBadge(data.count);
+          }
+        })
+        .catch(() => {});
+    }, 60000);
+
+    setBadge(badge ? Number(badge.textContent || 0) : 0);
   })();
 })();

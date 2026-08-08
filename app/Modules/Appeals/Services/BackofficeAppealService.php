@@ -224,7 +224,7 @@ class BackofficeAppealService
             return ['ok' => false, 'errors' => [lang('Backoffice.apl_err_court_level')]];
         }
 
-        $statusId  = $this->statuses->findDefaultId();
+        $statusId  = $this->statuses->findDefaultId($niveauId);
         $stageOpts = $this->stages->options($niveauId, true);
         $stageId   = $stageOpts[0]['id'] ?? null;
         if (! $statusId || ! $stageId) {

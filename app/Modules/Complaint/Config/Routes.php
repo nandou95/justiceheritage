@@ -22,6 +22,8 @@ $routes->group('backoffice', ['namespace' => 'Modules\\Complaint\\Controllers'],
     $routes->get('complaint-stages/(:num)/profiles', 'ComplaintStages::profiles/$1');
     $routes->get('complaint-stages/(:num)/actions', 'ComplaintStages::actions/$1');
     $routes->post('complaint-stages/(:num)/actions', 'ComplaintStages::storeAction/$1');
+    $routes->get('complaint-stages/(:num)/actions/(:num)/json', 'ComplaintStages::actionJson/$1/$2');
+    $routes->post('complaint-stages/(:num)/actions/(:num)', 'ComplaintStages::updateAction/$1/$2');
     $routes->get('complaint-stages/(:num)/actions-json', 'ComplaintStages::actionsJson/$1');
     $routes->post('complaint-stages/(:num)/actions/(:num)/toggle-status', 'ComplaintStages::toggleAction/$1/$2');
 
@@ -39,6 +41,7 @@ $routes->group('backoffice', ['namespace' => 'Modules\\Complaint\\Controllers'],
     $routes->post('complaint-statuses', 'ComplaintStatuses::store');
     $routes->post('complaint-statuses/(:num)', 'ComplaintStatuses::update/$1');
     $routes->post('complaint-statuses/(:num)/toggle-status', 'ComplaintStatuses::toggleStatus/$1');
+    $routes->get('api/complaint-statuses', 'ComplaintStatuses::optionsJson');
 
     // Document types
     $routes->get('document-types', 'DocumentTypes::index');

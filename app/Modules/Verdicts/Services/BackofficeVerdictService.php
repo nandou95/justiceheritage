@@ -345,9 +345,10 @@ class BackofficeVerdictService
             }
         }
 
-        // Prefer a status that looks like "judged/decided" when available.
+        // Prefer a status that looks like "judged/decided" for this jurisdiction level.
         try {
-            foreach ($this->statuses->listFiltered(true) as $st) {
+            $niveauId = (int) ($complaint['niveau_juridiction_id'] ?? 0);
+            foreach ($this->statuses->listFiltered($niveauId > 0 ? $niveauId : null, true) as $st) {
                 $label = mb_strtolower((string) ($st['description_statut_plainte'] ?? ''));
                 if (str_contains($label, 'jug') || str_contains($label, 'decid') || str_contains($label, 'verdict') || str_contains($label, 'clos')) {
                     $update['statut_plainte_id'] = (int) $st['statut_plainte_id'];

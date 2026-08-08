@@ -4,26 +4,34 @@ namespace Modules\Complaint\Services;
 
 use Modules\Administration\Models\AuditLogModel;
 use Modules\Complaint\Models\StatutPlainteModel;
+use Modules\CourtJurisdiction\Models\NiveauJuridictionModel;
 
 class ComplaintStatusService
 {
     private StatutPlainteModel $statuses;
+    private NiveauJuridictionModel $levels;
     private AuditLogModel $audit;
 
-    public function __construct(?StatutPlainteModel $statuses = null, ?AuditLogModel $audit = null)
-    {
+    public function __construct(
+        ?StatutPlainteModel $statuses = null,
+        ?NiveauJuridictionModel $levels = null,
+        ?AuditLogModel $audit = null
+    ) {
         $this->statuses = $statuses ?? new StatutPlainteModel();
+        $this->levels   = $levels ?? new NiveauJuridictionModel();
         $this->audit    = $audit ?? new AuditLogModel();
     }
 
     /**
      * @return list<array<string, mixed>>
      */
-    public function list(?bool $isActive = null): array
+    public function list(?int $niveauId = null, ?bool $isActive = null): array
     {
         try {
-            $rows = $this->statuses->listFiltered($isActive);
+            $rows = $this->statuses->listFiltered($niveauId, $isActive);
         } catch (\Throwable $e) {
+            log_message('error', 'Failed to list complaint statuses: {message}', ['message' => $e->getMessage()]);
+
             return [];
         }
 
@@ -33,6 +41,8 @@ class ComplaintStatusService
             return [
                 'id'          => (int) $row['statut_plainte_id'],
                 'description' => $row['description_statut_plainte'] ?? '',
+                'level'       => $row['desc_niveau_juridiction'] ?? '—',
+                'niveau_id'   => (int) ($row['niveau_juridiction_id'] ?? 0),
                 'is_active'   => $active,
                 'status'      => $active ? lang('Backoffice.status_active') : lang('Backoffice.status_inactive'),
             ];
@@ -50,14 +60,13 @@ class ComplaintStatusService
             return ['ok' => false, 'errors' => $errors];
         }
 
-        $data = [
-            'description_statut_plainte' => trim((string) $input['description_statut_plainte']),
-            'is_active'                  => true,
-        ];
+        $data = $this->mapWritable($input) + ['is_active' => true];
 
         try {
             $id = $this->statuses->insert($data, true);
         } catch (\Throwable $e) {
+            log_message('error', 'Failed to create complaint status: {message}', ['message' => $e->getMessage()]);
+
             return ['ok' => false, 'errors' => [lang('Backoffice.cst_err_save')]];
         }
 
@@ -81,16 +90,18 @@ class ComplaintStatusService
             return ['ok' => false, 'errors' => [lang('Backoffice.cst_err_not_found')]];
         }
 
-        $errors = $this->validate($input);
+        $errors = $this->validate($input, $id);
         if ($errors) {
             return ['ok' => false, 'errors' => $errors];
         }
 
-        $data = ['description_statut_plainte' => trim((string) $input['description_statut_plainte'])];
+        $data = $this->mapWritable($input);
 
         try {
             $this->statuses->update($id, $data);
         } catch (\Throwable $e) {
+            log_message('error', 'Failed to update complaint status: {message}', ['message' => $e->getMessage()]);
+
             return ['ok' => false, 'errors' => [lang('Backoffice.cst_err_save')]];
         }
 
@@ -134,13 +145,47 @@ class ComplaintStatusService
      * @param array<string, mixed> $input
      * @return list<string>
      */
-    private function validate(array $input): array
+    private function validate(array $input, ?int $ignoreId = null): array
     {
-        if (trim((string) ($input['description_statut_plainte'] ?? '')) === '') {
-            return [lang('Backoffice.cst_err_required')];
+        $errors      = [];
+        $description = trim((string) ($input['description_statut_plainte'] ?? ''));
+        $niveauId    = (int) ($input['niveau_juridiction_id'] ?? 0);
+
+        if ($description === '') {
+            $errors[] = lang('Backoffice.cst_err_required');
         }
 
-        return [];
+        if ($niveauId < 1 || ! $this->isActiveLevel($niveauId)) {
+            $errors[] = lang('Backoffice.cst_err_level');
+        } elseif ($description !== '' && $this->statuses->descriptionExists($description, $niveauId, $ignoreId)) {
+            $errors[] = lang('Backoffice.cst_err_duplicate');
+        }
+
+        return $errors;
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    private function mapWritable(array $input): array
+    {
+        return [
+            'description_statut_plainte' => trim((string) ($input['description_statut_plainte'] ?? '')),
+            'niveau_juridiction_id'      => (int) ($input['niveau_juridiction_id'] ?? 0),
+        ];
+    }
+
+    private function isActiveLevel(int $niveauId): bool
+    {
+        $row = $this->levels->builder()
+            ->select('niveau_juridiction_id')
+            ->where('niveau_juridiction_id', $niveauId)
+            ->where('(is_active IS NULL OR is_active = TRUE)', null, false)
+            ->get(1)
+            ->getRowArray();
+
+        return is_array($row);
     }
 
     private function actorId(): ?int

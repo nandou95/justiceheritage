@@ -19,12 +19,19 @@ class ComplaintStages extends \App\Controllers\BaseController
     public function index()
     {
         $status   = $this->request->getGet('status');
+        $niveauId = $this->request->getGet('niveau_juridiction_id');
         $isActive = $this->parseStatus($status);
+        $niveau   = ($niveauId !== null && $niveauId !== '') ? (int) $niveauId : null;
 
         return view('Modules\Complaint\Views\stages\index', [
-            'title'  => lang('Backoffice.cs_title'),
-            'active' => 'complaint-stages',
-            'items'  => $this->service->list($isActive),
+            'title'   => lang('Backoffice.cs_title'),
+            'active'  => 'complaint-stages',
+            'items'   => $this->service->list($isActive, $niveau && $niveau > 0 ? $niveau : null),
+            'filters' => [
+                'status'                => $status,
+                'niveau_juridiction_id' => $niveauId,
+            ],
+            'levels' => (new NiveauJuridictionModel())->options(),
             'status' => $status,
             'user'   => $this->sampleUser(),
         ]);
@@ -112,6 +119,22 @@ class ComplaintStages extends \App\Controllers\BaseController
         ]);
     }
 
+    public function actionJson(int $id, int $actionId): ResponseInterface
+    {
+        $action = $this->service->findAction($id, $actionId);
+        if ($action === null) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'ok'     => false,
+                'errors' => [lang('Backoffice.cs_action_err_not_found')],
+            ]);
+        }
+
+        return $this->response->setJSON([
+            'ok'     => true,
+            'action' => $action,
+        ]);
+    }
+
     public function actions(int $id)
     {
         $record = $this->service->find($id);
@@ -141,6 +164,40 @@ class ComplaintStages extends \App\Controllers\BaseController
         return redirect()
             ->to(site_url('backoffice/complaint-stages/' . $id . '/actions'))
             ->with('success', lang('Backoffice.cs_action_created'));
+    }
+
+    public function updateAction(int $id, int $actionId)
+    {
+        $result = $this->service->updateAction($id, $actionId, $this->request->getPost());
+        $wantsJson = $this->request->isAJAX()
+            || str_contains(strtolower($this->request->getHeaderLine('Accept')), 'application/json');
+
+        if (! ($result['ok'] ?? false)) {
+            if ($wantsJson) {
+                return $this->response->setStatusCode(422)->setJSON([
+                    'ok'     => false,
+                    'errors' => $result['errors'] ?? [lang('Backoffice.cs_action_err_save')],
+                ]);
+            }
+
+            return redirect()
+                ->to(site_url('backoffice/complaint-stages/' . $id . '/actions'))
+                ->withInput()
+                ->with('errors', $result['errors'] ?? [lang('Backoffice.cs_action_err_save')]);
+        }
+
+        if ($wantsJson) {
+            return $this->response->setJSON([
+                'ok'       => true,
+                'message'  => lang('Backoffice.cs_action_updated'),
+                'action'   => $result['action'] ?? null,
+                'csrfHash' => csrf_hash(),
+            ]);
+        }
+
+        return redirect()
+            ->to(site_url('backoffice/complaint-stages/' . $id . '/actions'))
+            ->with('success', lang('Backoffice.cs_action_updated'));
     }
 
     public function toggleAction(int $id, int $actionId)

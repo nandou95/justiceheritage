@@ -10,6 +10,13 @@ use CodeIgniter\Router\RouteCollection;
 $routes->group('backoffice', ['namespace' => 'Modules\\Administration\\Controllers'], static function ($routes) {
     $routes->get('/', 'Backoffice::index');
 
+    $routes->get('my/profile', 'Account::profile');
+    $routes->get('my/profile/edit', 'Account::edit');
+    $routes->post('my/profile', 'Account::update');
+    $routes->get('my/password', 'Account::password');
+    $routes->post('my/password', 'Account::updatePassword');
+    $routes->get('my/notification-preferences', 'Account::notificationPreferences');
+
     $routes->get('users', 'Users::index');
     $routes->get('users/create', 'Users::create');
     $routes->post('users', 'Users::store');
