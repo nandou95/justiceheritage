@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="<?= public_asset('assets/vendor/datatables/dataTables.bootstrap5.min.css') ?>">
     <link rel="stylesheet" href="<?= public_asset('assets/css/public.css') ?>">
     <link rel="stylesheet" href="<?= public_asset('assets/css/portal.css') ?>">
+    <?= $this->renderSection('styles') ?>
 </head>
 <body class="jh-portal-body">
     <?php
@@ -166,5 +167,6 @@
     <script src="<?= public_asset('assets/vendor/datatables/dataTables.bootstrap5.min.js') ?>"></script>
     <script src="<?= public_asset('assets/js/public.js') ?>"></script>
     <script src="<?= public_asset('assets/js/portal.js') ?>"></script>
+    <?= $this->renderSection('scripts') ?>
 </body>
 </html>

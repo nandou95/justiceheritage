@@ -15,80 +15,106 @@
 <section class="bo-panel bo-crud-panel">
     <form class="bo-filters" method="get" action="<?= site_url('backoffice/notifications/complainants') ?>" data-bo-log-filters
           data-api-communes="<?= esc(site_url('api/communes'), 'attr') ?>">
-        <div class="row g-2">
-            <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label" for="filter_canal"><?= esc(lang('Backoffice.ntf_filter_channel')) ?></label>
-                <select class="form-select" id="filter_canal" name="canal_notification_id">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($channels as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['canal_notification_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
-                            <?= esc($opt['label']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+        <?= view('partials/bo_filters_head', [
+            'filters' => $filters,
+            'filterKeys' => ['canal_notification_id', 'statut_notification_id', 'province_id', 'commune_id', 'personne_id', 'plainte_id', 'date_from', 'date_to'],
+            'resetUrl' => site_url('backoffice/notifications/complainants'),
+            'lead' => lang('Backoffice.filters_lead'),
+        ]) ?>
+        <div class="bo-filters-body">
+            <div class="bo-filter-group">
+                <p class="bo-filter-group-title"><i class="bi bi-bell" aria-hidden="true"></i> <?= esc(lang('Backoffice.filter_group_notification')) ?></p>
+                <div class="bo-filter-fields">
+                    <div class="bo-filter-field">
+                        <label class="form-label" for="filter_canal"><?= esc(lang('Backoffice.ntf_filter_channel')) ?></label>
+                        <select class="form-select" id="filter_canal" name="canal_notification_id">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($channels as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['canal_notification_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
+                                    <?= esc($opt['label']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label" for="filter_statut"><?= esc(lang('Backoffice.ntf_filter_status')) ?></label>
+                        <select class="form-select" id="filter_statut" name="statut_notification_id">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($statuses as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['statut_notification_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
+                                    <?= esc($opt['label']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
             </div>
-            <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label" for="filter_statut"><?= esc(lang('Backoffice.ntf_filter_status')) ?></label>
-                <select class="form-select" id="filter_statut" name="statut_notification_id">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($statuses as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['statut_notification_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
-                            <?= esc($opt['label']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+            <div class="bo-filter-group">
+                <p class="bo-filter-group-title"><i class="bi bi-geo-alt" aria-hidden="true"></i> <?= esc(lang('Backoffice.filter_group_location')) ?></p>
+                <div class="bo-filter-fields">
+                    <div class="bo-filter-field">
+                        <label class="form-label" for="filter_province"><?= esc(lang('Backoffice.filter_province')) ?></label>
+                        <select class="form-select" id="filter_province" name="province_id" data-filter="province">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($provinces as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['province_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
+                                    <?= esc($opt['label']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label" for="filter_commune"><?= esc(lang('Backoffice.filter_commune')) ?></label>
+                        <select class="form-select" id="filter_commune" name="commune_id" data-filter="commune">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($communes as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['commune_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
+                                    <?= esc($opt['label']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
             </div>
-            <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label" for="filter_province"><?= esc(lang('Backoffice.filter_province')) ?></label>
-                <select class="form-select" id="filter_province" name="province_id" data-filter="province">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($provinces as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['province_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
-                            <?= esc($opt['label']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+            <div class="bo-filter-group">
+                <p class="bo-filter-group-title"><i class="bi bi-people" aria-hidden="true"></i> <?= esc(lang('Backoffice.filter_group_people')) ?></p>
+                <div class="bo-filter-fields">
+                    <div class="bo-filter-field">
+                        <label class="form-label" for="filter_personne"><?= esc(lang('Backoffice.ntf_filter_complainant')) ?></label>
+                        <select class="form-select" id="filter_personne" name="personne_id">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($complainants as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['personne_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
+                                    <?= esc($opt['label']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label" for="filter_plainte"><?= esc(lang('Backoffice.ntf_filter_complaint')) ?></label>
+                        <select class="form-select" id="filter_plainte" name="plainte_id">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($complaints as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['plainte_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
+                                    <?= esc($opt['label']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
             </div>
-            <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label" for="filter_commune"><?= esc(lang('Backoffice.filter_commune')) ?></label>
-                <select class="form-select" id="filter_commune" name="commune_id" data-filter="commune">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($communes as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['commune_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
-                            <?= esc($opt['label']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label" for="filter_personne"><?= esc(lang('Backoffice.ntf_filter_complainant')) ?></label>
-                <select class="form-select" id="filter_personne" name="personne_id">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($complainants as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['personne_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
-                            <?= esc($opt['label']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-2">
-                <label class="form-label" for="filter_plainte"><?= esc(lang('Backoffice.ntf_filter_complaint')) ?></label>
-                <select class="form-select" id="filter_plainte" name="plainte_id">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($complaints as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['plainte_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>>
-                            <?= esc($opt['label']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-6 col-md-3 col-xl-2">
-                <label class="form-label" for="filter_date_from"><?= esc(lang('Backoffice.ntf_filter_date_from')) ?></label>
-                <input class="form-control" type="date" id="filter_date_from" name="date_from" value="<?= esc((string) ($filters['date_from'] ?? ''), 'attr') ?>">
-            </div>
-            <div class="col-6 col-md-3 col-xl-2">
-                <label class="form-label" for="filter_date_to"><?= esc(lang('Backoffice.ntf_filter_date_to')) ?></label>
-                <input class="form-control" type="date" id="filter_date_to" name="date_to" value="<?= esc((string) ($filters['date_to'] ?? ''), 'attr') ?>">
+            <div class="bo-filter-group">
+                <p class="bo-filter-group-title"><i class="bi bi-calendar3" aria-hidden="true"></i> <?= esc(lang('Backoffice.filter_group_dates')) ?></p>
+                <div class="bo-filter-fields">
+                    <div class="bo-filter-field">
+                        <label class="form-label" for="filter_date_from"><?= esc(lang('Backoffice.ntf_filter_date_from')) ?></label>
+                        <input class="form-control" type="date" id="filter_date_from" name="date_from" value="<?= esc((string) ($filters['date_from'] ?? ''), 'attr') ?>">
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label" for="filter_date_to"><?= esc(lang('Backoffice.ntf_filter_date_to')) ?></label>
+                        <input class="form-control" type="date" id="filter_date_to" name="date_to" value="<?= esc((string) ($filters['date_to'] ?? ''), 'attr') ?>">
+                    </div>
+                </div>
             </div>
         </div>
     </form>

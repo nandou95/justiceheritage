@@ -179,8 +179,23 @@ class Complaints extends \App\Controllers\BaseController
         $communeId  = (int) (old('commune_id') ?: ($record['commune_id'] ?? 0));
         $niveauId   = (int) (old('niveau_juridiction_id') ?: ($record['niveau_juridiction_id'] ?? 0));
 
+        // Complaints may only be filed at first-instance levels (is_recours = false).
+        $levels = (new NiveauJuridictionModel())->options(false);
+        if ($niveauId > 0) {
+            $levelIds = array_map(static fn (array $opt): int => (int) $opt['id'], $levels);
+            if (! in_array($niveauId, $levelIds, true)) {
+                $current = (new NiveauJuridictionModel())->find($niveauId);
+                if (is_array($current)) {
+                    $levels[] = [
+                        'id'    => $current['niveau_juridiction_id'],
+                        'label' => $current['desc_niveau_juridiction'],
+                    ];
+                }
+            }
+        }
+
         return [
-            'levels'        => (new NiveauJuridictionModel())->options(),
+            'levels'        => $levels,
             'provinces'     => (new ProvinceModel())->options(),
             'communes'      => $provinceId ? (new CommuneModel())->optionsByProvince($provinceId) : [],
             'jurisdictions' => (new JuridictionModel())->options([

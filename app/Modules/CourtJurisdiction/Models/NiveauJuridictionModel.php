@@ -38,16 +38,28 @@ class NiveauJuridictionModel extends Model
     }
 
     /**
+     * Active jurisdiction levels.
+     *
+     * @param bool|null $isRecours When true/false, restrict to appeal / first-instance levels.
      * @return list<array{id:int|string,label:string}>
      */
-    public function options(): array
+    public function options(?bool $isRecours = null): array
     {
-        $rows = $this->builder()
+        $builder = $this->builder()
             ->select('niveau_juridiction_id, desc_niveau_juridiction')
             ->where('(is_active IS NULL OR is_active = TRUE)', null, false)
-            ->orderBy('niveau_juridiction_id', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->orderBy('niveau_juridiction_id', 'ASC');
+
+        if ($isRecours === true) {
+            $builder->where('is_recours', true);
+        } elseif ($isRecours === false) {
+            $builder->groupStart()
+                ->where('is_recours', false)
+                ->orWhere('is_recours', null)
+                ->groupEnd();
+        }
+
+        $rows = $builder->get()->getResultArray();
 
         return array_map(static fn (array $row): array => [
             'id'    => $row['niveau_juridiction_id'],

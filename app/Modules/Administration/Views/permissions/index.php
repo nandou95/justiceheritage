@@ -20,14 +20,26 @@
 
 <section class="bo-panel bo-crud-panel" data-bo-perm-live>
     <div class="bo-filters">
-        <div class="row g-2 align-items-end">
-            <div class="col-12 col-md-4 col-xl-3">
-                <label class="form-label" for="filter_perm_status"><?= esc(lang('Backoffice.filter_status')) ?></label>
-                <select class="form-select" id="filter_perm_status" name="status" data-perm-filter="status">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <option value="true"><?= esc(lang('Backoffice.perm_status_enabled')) ?></option>
-                    <option value="false"><?= esc(lang('Backoffice.perm_status_disabled')) ?></option>
-                </select>
+        <?= view('partials/bo_filters_head', [
+            'filters' => [],
+            'filterKeys' => [],
+            'resetUrl' => site_url('backoffice/permissions'),
+            'lead' => lang('Backoffice.filters_lead'),
+            'showMeta' => false,
+        ]) ?>
+        <div class="bo-filters-body bo-filters-body--single">
+            <div class="bo-filter-group">
+                <p class="bo-filter-group-title"><i class="bi bi-toggle2-on" aria-hidden="true"></i> <?= esc(lang('Backoffice.filter_group_status')) ?></p>
+                <div class="bo-filter-fields">
+                    <div class="bo-filter-field">
+                        <label class="form-label" for="filter_perm_status"><?= esc(lang('Backoffice.filter_status')) ?></label>
+                        <select class="form-select" id="filter_perm_status" name="status" data-perm-filter="status">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <option value="true"><?= esc(lang('Backoffice.perm_status_enabled')) ?></option>
+                            <option value="false"><?= esc(lang('Backoffice.perm_status_disabled')) ?></option>
+                        </select>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

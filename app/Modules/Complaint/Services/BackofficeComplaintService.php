@@ -4,8 +4,10 @@ namespace Modules\Complaint\Services;
 
 use CodeIgniter\HTTP\Files\UploadedFile;
 use Modules\Administration\Models\AuditLogModel;
+use Modules\Complaint\Models\ConfigurationEtapePlainteModel;
 use Modules\Complaint\Models\DocumentPlainteModel;
 use Modules\Complaint\Models\EtapePlainteModel;
+use Modules\Complaint\Models\HistoriquePlainteModel;
 use Modules\Complaint\Models\PlainteModel;
 use Modules\Complaint\Models\PlainteParcelleModel;
 use Modules\Complaint\Models\PlainteRolePersonneModel;
@@ -21,6 +23,11 @@ class BackofficeComplaintService
     private const DOC_MAX_KB = 10240;
     private const DOC_EXTS   = ['pdf', 'jpg', 'jpeg', 'png'];
 
+    /** Initial filing workflow keys used when creating a complaint. */
+    private const FILING_STAGE_ID  = 1;
+    private const FILING_ACTION_ID = 1;
+    private const FILING_STATUS_ID = 1;
+
     private PlainteModel $plaintes;
     private PlainteParcelleModel $parcelles;
     private PlainteRolePersonneModel $roles;
@@ -33,21 +40,25 @@ class BackofficeComplaintService
     private NiveauJuridictionModel $levels;
     private PersonneModel $people;
     private AuditLogModel $audit;
+    private ConfigurationEtapePlainteModel $stageConfig;
+    private HistoriquePlainteModel $history;
 
     public function __construct()
     {
-        $this->plaintes  = new PlainteModel();
-        $this->parcelles = new PlainteParcelleModel();
-        $this->roles     = new PlainteRolePersonneModel();
-        $this->documents = new DocumentPlainteModel();
-        $this->stages    = new EtapePlainteModel();
-        $this->statuses  = new StatutPlainteModel();
-        $this->docTypes  = new TypeDocumentModel();
-        $this->roleTypes = new RolePersonneModel();
-        $this->courts    = new JuridictionModel();
-        $this->levels    = new NiveauJuridictionModel();
-        $this->people    = new PersonneModel();
-        $this->audit     = new AuditLogModel();
+        $this->plaintes    = new PlainteModel();
+        $this->parcelles   = new PlainteParcelleModel();
+        $this->roles       = new PlainteRolePersonneModel();
+        $this->documents   = new DocumentPlainteModel();
+        $this->stages      = new EtapePlainteModel();
+        $this->statuses    = new StatutPlainteModel();
+        $this->docTypes    = new TypeDocumentModel();
+        $this->roleTypes   = new RolePersonneModel();
+        $this->courts      = new JuridictionModel();
+        $this->levels      = new NiveauJuridictionModel();
+        $this->people      = new PersonneModel();
+        $this->audit       = new AuditLogModel();
+        $this->stageConfig = new ConfigurationEtapePlainteModel();
+        $this->history     = new HistoriquePlainteModel();
     }
 
     /**
@@ -134,23 +145,41 @@ class BackofficeComplaintService
     /**
      * @param array<string, mixed> $input
      * @param array<string, list<UploadedFile|null>> $filesByType
-     * @return array{ok:bool,errors?:list<string>,id?:int}
+     * @param array{source?:string,personne_id?:int|null} $context
+     * @return array{ok:bool,errors?:list<string>,id?:int,numero?:string}
      */
-    public function create(array $input, array $filesByType = []): array
+    public function create(array $input, array $filesByType = [], array $context = []): array
     {
-        $errors = $this->validate($input, $filesByType, true);
+        $source     = ($context['source'] ?? 'backoffice') === 'portal' ? 'portal' : 'backoffice';
+        $fromPortal = $source === 'portal';
+        $personneId = isset($context['personne_id']) ? (int) $context['personne_id'] : 0;
+
+        if ($fromPortal && $personneId > 0) {
+            $complainants = $this->ids($input['complainant_ids'] ?? []);
+            if (! in_array($personneId, $complainants, true)) {
+                $complainants[] = $personneId;
+            }
+            $input['complainant_ids'] = $complainants;
+        }
+
+        $errors = $this->validate($input, $filesByType, true, ! $fromPortal);
         if ($errors) {
             return ['ok' => false, 'errors' => $errors];
         }
 
-        $niveauId  = (int) $input['niveau_juridiction_id'];
-        $statusId  = $this->statuses->findDefaultId($niveauId);
-        $stageOpts = $this->stages->options($niveauId, true);
-        $stageId   = $stageOpts[0]['id'] ?? null;
+        $niveauId = (int) $input['niveau_juridiction_id'];
+        $statusId = self::FILING_STATUS_ID;
+        $stageId  = $this->stageConfig->findNextStageId(self::FILING_STAGE_ID, self::FILING_ACTION_ID);
 
-        if (! $statusId || ! $stageId) {
+        if (! $stageId) {
+            return ['ok' => false, 'errors' => [lang('Backoffice.cmp_err_stage_config')]];
+        }
+
+        if (! $this->statuses->find($statusId)) {
             return ['ok' => false, 'errors' => [lang('Backoffice.cmp_err_defaults')]];
         }
+
+        $actorUserId = $fromPortal ? null : $this->actorId();
 
         $data = [
             'numero_dossier'         => $this->plaintes->nextCaseNumber(),
@@ -159,10 +188,10 @@ class BackofficeComplaintService
             'niveau_juridiction_id'  => $niveauId,
             'juridiction_id'         => (int) $input['juridiction_id'],
             'statut_plainte_id'      => $statusId,
-            'etape_plainte_id'       => (int) $stageId,
+            'etape_plainte_id'       => $stageId,
             'date_depot'             => date('Y-m-d'),
-            'enregistre_par'         => $this->actorId(),
-            'est_cree_par_plaigant'  => false,
+            'enregistre_par'         => $actorUserId,
+            'est_cree_par_plaigant'  => $fromPortal,
             'is_recours'             => false,
             'created_at'             => date('Y-m-d H:i:s'),
             'updated_at'             => date('Y-m-d H:i:s'),
@@ -177,9 +206,22 @@ class BackofficeComplaintService
             if (! $id) {
                 throw new \RuntimeException('plainte insert failed');
             }
-            $this->syncParties((int) $id, $input);
+            $this->syncParties((int) $id, $input, $actorUserId);
             $this->syncParcels((int) $id, $input);
             $storedFiles = $this->storeDocuments((int) $id, $niveauId, $filesByType);
+
+            if (! $this->history->recordEvent([
+                'plainte_id'              => (int) $id,
+                'etape_plainte_id'        => self::FILING_STAGE_ID,
+                'etape_plainte_action_id' => self::FILING_ACTION_ID,
+                'statut_plainte_id'       => self::FILING_STATUS_ID,
+                'is_utilisateur'          => ! $fromPortal,
+                'utilisateur_id'          => $fromPortal ? null : $actorUserId,
+                'personne_id'             => $fromPortal ? ($personneId > 0 ? $personneId : null) : null,
+            ])) {
+                throw new \RuntimeException('historique_plainte insert failed');
+            }
+
             $db->transComplete();
         } catch (\Throwable $e) {
             $db->transRollback();
@@ -199,9 +241,15 @@ class BackofficeComplaintService
             return ['ok' => false, 'errors' => [lang('Backoffice.cmp_err_save')]];
         }
 
-        $this->audit->record('CREATE', 'plainte.plainte', (int) $id, null, $data, $this->actorId());
+        if (! $fromPortal) {
+            $this->audit->record('CREATE', 'plainte.plainte', (int) $id, null, $data, $this->actorId());
+        }
 
-        return ['ok' => true, 'id' => (int) $id];
+        return [
+            'ok'     => true,
+            'id'     => (int) $id,
+            'numero' => (string) $data['numero_dossier'],
+        ];
     }
 
     /**
@@ -237,7 +285,7 @@ class BackofficeComplaintService
         try {
             $this->plaintes->update($id, $data);
             $this->roles->deleteByPlainte($id);
-            $this->syncParties($id, $input);
+            $this->syncParties($id, $input, $this->actorId());
             $this->parcelles->deleteByPlainte($id);
             $this->syncParcels($id, $input);
             $storedFiles = $this->storeDocuments($id, $niveauId, $filesByType);
@@ -270,7 +318,7 @@ class BackofficeComplaintService
      * @param array<string, list<UploadedFile|null>> $filesByType
      * @return list<string>
      */
-    private function validate(array $input, array $filesByType, bool $requireMandatoryDocs): array
+    private function validate(array $input, array $filesByType, bool $requireMandatoryDocs, bool $requireParties = true): array
     {
         $errors = [];
         $requiredLabels = [
@@ -289,20 +337,25 @@ class BackofficeComplaintService
 
         $niveauId = (int) ($input['niveau_juridiction_id'] ?? 0);
         $courtId  = (int) ($input['juridiction_id'] ?? 0);
-        if ($niveauId && ! $this->levels->find($niveauId)) {
+        $level    = $niveauId > 0 ? $this->levels->find($niveauId) : null;
+        if ($niveauId && ! $level) {
             $errors[] = lang('Backoffice.cmp_err_level');
+        } elseif ($requireMandatoryDocs && $level && db_bool($level['is_recours'] ?? false)) {
+            $errors[] = lang('Backoffice.cmp_err_level_filing');
         }
         if ($courtId && ! $this->courts->find($courtId)) {
             $errors[] = lang('Backoffice.cmp_err_court');
         }
 
-        $complainants = $this->ids($input['complainant_ids'] ?? []);
-        $defendants   = $this->ids($input['defendant_ids'] ?? []);
-        if ($complainants === []) {
-            $errors[] = lang('Backoffice.cmp_err_complainants');
-        }
-        if ($defendants === []) {
-            $errors[] = lang('Backoffice.cmp_err_defendants');
+        if ($requireParties) {
+            $complainants = $this->ids($input['complainant_ids'] ?? []);
+            $defendants   = $this->ids($input['defendant_ids'] ?? []);
+            if ($complainants === []) {
+                $errors[] = lang('Backoffice.cmp_err_complainants');
+            }
+            if ($defendants === []) {
+                $errors[] = lang('Backoffice.cmp_err_defendants');
+            }
         }
 
         $parcels = $input['parcels'] ?? [];
@@ -336,7 +389,7 @@ class BackofficeComplaintService
     /**
      * @param array<string, mixed> $input
      */
-    private function syncParties(int $plainteId, array $input): void
+    private function syncParties(int $plainteId, array $input, ?int $utilisateurId = null): void
     {
         $now = date('Y-m-d H:i:s');
         $map = [
@@ -349,7 +402,7 @@ class BackofficeComplaintService
         }
 
         foreach ($map as $roleId => $personneIds) {
-            foreach ($personneIds as $personneId) {
+            foreach (array_values(array_unique($personneIds)) as $personneId) {
                 if (! $this->people->find($personneId)) {
                     continue;
                 }
@@ -358,7 +411,7 @@ class BackofficeComplaintService
                     'personne_id'      => $personneId,
                     'role_personne_id' => $roleId,
                     'est_recourant'    => false,
-                    'utilisateur_id'   => $this->actorId(),
+                    'utilisateur_id'   => $utilisateurId,
                     'date_ajout'       => $now,
                     'created_at'       => $now,
                 ]);

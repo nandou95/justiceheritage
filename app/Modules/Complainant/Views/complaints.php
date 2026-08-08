@@ -2,6 +2,8 @@
 
 <?= $this->section('content') ?>
 
+<?= view('Modules\Administration\Views\partials\flash') ?>
+
 <?php $complaints = $complaints ?? []; ?>
 
 <?= view('Modules\Complainant\Views\partials\list_stats', [

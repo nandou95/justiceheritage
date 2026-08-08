@@ -18,6 +18,7 @@ class CaseOverviewService
                 'phone'       => (string) ($authUser['phone'] ?? ''),
                 'national_id' => $nationalId,
                 'id'          => $nationalId,
+                'personne_id' => (int) ($authUser['id'] ?? 0),
             ];
         }
 
@@ -32,6 +33,7 @@ class CaseOverviewService
             'phone'       => '',
             'national_id' => '',
             'id'          => '',
+            'personne_id' => 0,
         ];
     }
 

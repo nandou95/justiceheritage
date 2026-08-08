@@ -8,6 +8,8 @@ $routes->group('portal', ['namespace' => 'Modules\\Complainant\\Controllers', 'f
     $routes->get('complaints', 'Portal::complaints');
     $routes->get('complaints/new', 'Portal::createComplaint');
     $routes->post('complaints/new', 'Portal::createComplaint');
+    $routes->get('api/court-jurisdictions', 'Portal::courtJurisdictionOptions');
+    $routes->get('api/complaint-document-types', 'Portal::documentTypes');
     $routes->get('complaints/(:segment)', 'Portal::showComplaint/$1');
     $routes->get('appeals/provincial', 'Portal::provincialAppeal');
     $routes->post('appeals/provincial', 'Portal::provincialAppeal');

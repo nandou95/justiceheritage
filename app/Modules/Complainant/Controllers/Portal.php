@@ -3,9 +3,17 @@
 namespace Modules\Complainant\Controllers;
 
 use App\Controllers\BaseController;
+use CodeIgniter\HTTP\ResponseInterface;
 use Modules\Appeals\Services\AppealService;
 use Modules\Complainant\Services\CaseOverviewService;
+use Modules\Complaint\Models\TypeDocumentModel;
+use Modules\Complaint\Services\BackofficeComplaintService;
 use Modules\Complaint\Services\ComplaintService;
+use Modules\CourtJurisdiction\Models\CommuneModel;
+use Modules\CourtJurisdiction\Models\JuridictionModel;
+use Modules\CourtJurisdiction\Models\NiveauJuridictionModel;
+use Modules\CourtJurisdiction\Models\ProvinceModel;
+use Modules\People\Models\PersonneModel;
 
 class Portal extends BaseController
 {
@@ -69,49 +77,134 @@ class Portal extends BaseController
 
     public function createComplaint()
     {
+        $user       = $this->overview->user();
+        $personneId = (int) ($user['personne_id'] ?? 0);
+
         if ($this->request->is('post')) {
-            $user = $this->overview->user();
-            $subject = (string) ($this->request->getPost('parcel')
-                ?: $this->request->getPost('subject')
-                ?: lang('Portal.sample_subject'));
-            $complaintNumber = 'JH-' . date('Y') . '-' . random_int(1000, 9999);
+            if ($personneId < 1) {
+                return redirect()->back()->withInput()->with('errors', [lang('Portal.new_err_session')]);
+            }
 
-            (new ComplaintService())->submitComplaint([
-                'subject' => $subject,
-                'user'    => $user,
-                'number'  => $complaintNumber,
-            ]);
-
-            service('notifications')->sendComplaintSubmitted(
-                (string) $user['email'],
-                (string) $user['name'],
-                $complaintNumber,
-                $subject
+            $filesByType = $this->collectDocuments();
+            $result      = (new BackofficeComplaintService())->create(
+                $this->request->getPost(),
+                $filesByType,
+                [
+                    'source'      => 'portal',
+                    'personne_id' => $personneId,
+                ]
             );
 
-            return redirect()->to('portal/complaints')->with('success', lang('Portal.new_demo'));
+            if (! ($result['ok'] ?? false)) {
+                return redirect()->back()->withInput()->with('errors', $result['errors'] ?? [lang('Backoffice.cmp_err_save')]);
+            }
+
+            $numero  = (string) ($result['numero'] ?? '');
+            $subject = trim((string) $this->request->getPost('objet'));
+            if ($user['email'] !== '') {
+                service('notifications')->sendComplaintSubmitted(
+                    (string) $user['email'],
+                    (string) $user['name'],
+                    $numero !== '' ? $numero : ('#' . (int) ($result['id'] ?? 0)),
+                    $subject !== '' ? $subject : lang('Portal.sample_subject')
+                );
+            }
+
+            return redirect()->to('portal/complaints')->with(
+                'success',
+                lang('Portal.new_success', [$numero !== '' ? $numero : (string) ($result['id'] ?? '')])
+            );
         }
 
+        $provinceId = (int) (old('province_id') ?: 0);
+        $communeId  = (int) (old('commune_id') ?: 0);
+        $niveauId   = (int) (old('niveau_juridiction_id') ?: 0);
+
+        $people = (new PersonneModel())->options();
+        // Creator is always a complainant; keep them out of the optional co-plaintiff picker.
+        $peopleForParties = array_values(array_filter(
+            $people,
+            static fn (array $opt): bool => (int) $opt['id'] !== $personneId
+        ));
+
         return view('Modules\Complainant\Views\complaint_new', [
-            'title'     => lang('Portal.new_title'),
-            'active'    => 'new',
-            'user'      => $this->overview->user(),
-            'locations' => $this->overview->sampleLocations(),
-            'courts'    => [
-                'communal_gitega'   => lang('Portal.court_opt_communal_gitega'),
-                'communal_giheta'   => lang('Portal.court_opt_communal_giheta'),
-                'communal_makebuko' => lang('Portal.court_opt_communal_makebuko'),
-                'communal_bujumbura'=> lang('Portal.court_opt_communal_bujumbura'),
-                'provincial_gitega' => lang('Portal.court_opt_provincial_gitega'),
+            'title'         => lang('Portal.new_title'),
+            'active'        => 'new',
+            'user'          => $user,
+            'record'        => [
+                'objet'                 => old('objet'),
+                'description'           => old('description'),
+                'niveau_juridiction_id' => old('niveau_juridiction_id'),
+                'province_id'           => old('province_id'),
+                'commune_id'            => old('commune_id'),
+                'juridiction_id'        => old('juridiction_id'),
+                'complainant_ids'       => old('complainant_ids') ?: [],
+                'defendant_ids'         => old('defendant_ids') ?: [],
+                'witness_ids'           => old('witness_ids') ?: [],
             ],
-            'docTypes'  => [
-                'national_id'  => lang('Portal.doc_type_id'),
-                'parcel_sketch'=> lang('Portal.doc_type_sketch'),
-                'land_title'   => lang('Portal.doc_type_title'),
-                'succession'   => lang('Portal.doc_type_succession'),
-                'other'        => lang('Portal.doc_type_other'),
-            ],
+            'parcels' => old('parcels') ?: [[
+                'localisation_parcelle'     => '',
+                'superficie_maitre_carreau' => '',
+                'province_parcelle_id'      => '',
+                'commune_parcelle_id'       => '',
+                'zone_parcelle_id'          => '',
+                'colline_parcelle_id'       => '',
+            ]],
+            'levels'        => (new NiveauJuridictionModel())->options(false),
+            'provinces'     => (new ProvinceModel())->options(),
+            'communes'      => $provinceId ? (new CommuneModel())->optionsByProvince($provinceId) : [],
+            'jurisdictions' => (new JuridictionModel())->options([
+                'niveau_juridiction_id' => $niveauId ?: null,
+                'province_id'           => $provinceId ?: null,
+                'commune_id'            => $communeId ?: null,
+                'active_only'           => true,
+            ]),
+            'people'     => $peopleForParties,
+            'hasWitness' => false,
+            'docTypes'   => $niveauId ? (new TypeDocumentModel())->listByNiveau($niveauId, true) : [],
         ]);
+    }
+
+    public function courtJurisdictionOptions(): ResponseInterface
+    {
+        $options = (new JuridictionModel())->options([
+            'niveau_juridiction_id' => $this->request->getGet('niveau_juridiction_id') ? (int) $this->request->getGet('niveau_juridiction_id') : null,
+            'province_id'           => $this->request->getGet('province_id') ? (int) $this->request->getGet('province_id') : null,
+            'commune_id'            => $this->request->getGet('commune_id') ? (int) $this->request->getGet('commune_id') : null,
+            'active_only'           => true,
+        ]);
+
+        return $this->response->setJSON(['ok' => true, 'options' => $options]);
+    }
+
+    public function documentTypes(): ResponseInterface
+    {
+        $niveauId = (int) ($this->request->getGet('niveau_juridiction_id') ?? 0);
+
+        return $this->response->setJSON([
+            'ok'    => true,
+            'types' => $niveauId ? (new TypeDocumentModel())->listByNiveau($niveauId, true) : [],
+        ]);
+    }
+
+    /**
+     * @return array<int, list<\CodeIgniter\HTTP\Files\UploadedFile|null>>
+     */
+    private function collectDocuments(): array
+    {
+        $files = $this->request->getFiles();
+        $docs  = $files['documents'] ?? [];
+        if (! is_array($docs)) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($docs as $typeId => $fileOrList) {
+            $list = is_array($fileOrList) ? $fileOrList : [$fileOrList];
+            $out[(int) $typeId] = $list;
+        }
+
+        return $out;
     }
 
     public function showComplaint(string $id)

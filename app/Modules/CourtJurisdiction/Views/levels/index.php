@@ -15,13 +15,26 @@
 </section>
 <section class="bo-panel bo-crud-panel">
     <form class="bo-filters" method="get" action="<?= site_url('backoffice/jurisdiction-levels') ?>">
-        <div class="row g-2 align-items-end">
-            <div class="col-md-3"><label class="form-label"><?= esc(lang('Backoffice.filter_status')) ?></label>
-                <select class="form-select" name="status">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <option value="true" <?= ($status ?? '') === 'true' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_active')) ?></option>
-                    <option value="false" <?= ($status ?? '') === 'false' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_inactive')) ?></option>
-                </select></div>
+        <?= view('partials/bo_filters_head', [
+            'filters' => ['status' => $status ?? ''],
+            'filterKeys' => ['status'],
+            'resetUrl' => site_url('backoffice/jurisdiction-levels'),
+            'lead' => lang('Backoffice.filters_lead'),
+        ]) ?>
+        <div class="bo-filters-body bo-filters-body--single">
+            <div class="bo-filter-group">
+                <p class="bo-filter-group-title"><i class="bi bi-toggle2-on" aria-hidden="true"></i> <?= esc(lang('Backoffice.filter_group_status')) ?></p>
+                <div class="bo-filter-fields">
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.filter_status')) ?></label>
+                        <select class="form-select" name="status">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <option value="true" <?= ($status ?? '') === 'true' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_active')) ?></option>
+                            <option value="false" <?= ($status ?? '') === 'false' ? 'selected' : '' ?>><?= esc(lang('Backoffice.status_inactive')) ?></option>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
     </form>
     <div class="bo-table-toolbar"><label class="bo-table-search"><i class="bi bi-search"></i><input type="search" class="form-control" id="jl-table-search" placeholder="<?= esc(lang('Backoffice.search_placeholder'), 'attr') ?>"></label></div>

@@ -19,99 +19,122 @@
     <form class="bo-filters" method="get" action="<?= site_url('backoffice/transfers') ?>" data-bo-trf-filters
           data-api-communes="<?= esc(site_url('api/communes'), 'attr') ?>"
           data-api-jurisdictions="<?= esc(site_url('backoffice/api/court-jurisdictions'), 'attr') ?>">
-        <div class="row g-2">
-            <div class="col-12"><p class="bo-filter-group-title mb-0"><?= esc(lang('Backoffice.trf_filter_source_group')) ?></p></div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"><?= esc(lang('Backoffice.trf_filter_src_level')) ?></label>
-                <select class="form-select" name="niveau_juridiction_source_id" data-filter="src-niveau">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($levels as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['niveau_juridiction_source_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"><?= esc(lang('Backoffice.trf_filter_src_province')) ?></label>
-                <select class="form-select" name="province_source_id" data-filter="src-province">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($provinces as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['province_source_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"><?= esc(lang('Backoffice.trf_filter_src_commune')) ?></label>
-                <select class="form-select" name="commune_source_id" data-filter="src-commune">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($sourceCommunes as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['commune_source_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"><?= esc(lang('Backoffice.trf_filter_src_court')) ?></label>
-                <select class="form-select" name="juridiction_source_id" data-filter="src-juridiction">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($sourceCourts as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['juridiction_source_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="col-12 mt-2"><p class="bo-filter-group-title mb-0"><?= esc(lang('Backoffice.trf_filter_dest_group')) ?></p></div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"><?= esc(lang('Backoffice.trf_filter_dst_level')) ?></label>
-                <select class="form-select" name="niveau_juridiction_dest_id" data-filter="dst-niveau">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($levels as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['niveau_juridiction_dest_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"><?= esc(lang('Backoffice.trf_filter_dst_province')) ?></label>
-                <select class="form-select" name="province_dest_id" data-filter="dst-province">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($provinces as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['province_dest_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"><?= esc(lang('Backoffice.trf_filter_dst_commune')) ?></label>
-                <select class="form-select" name="commune_dest_id" data-filter="dst-commune">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($destCommunes as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['commune_dest_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"><?= esc(lang('Backoffice.trf_filter_dst_court')) ?></label>
-                <select class="form-select" name="juridiction_dest_id" data-filter="dst-juridiction">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($destCourts as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['juridiction_dest_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
-                    <?php endforeach; ?>
-                </select>
+        <?= view('partials/bo_filters_head', [
+            'filters' => $filters,
+            'filterKeys' => [
+                'niveau_juridiction_source_id', 'province_source_id', 'commune_source_id', 'juridiction_source_id',
+                'niveau_juridiction_dest_id', 'province_dest_id', 'commune_dest_id', 'juridiction_dest_id',
+                'date_transfert', 'date_reception', 'statut_transfert_dossier_id',
+            ],
+            'resetUrl' => site_url('backoffice/transfers'),
+            'lead' => lang('Backoffice.filters_lead'),
+        ]) ?>
+        <div class="bo-filters-body">
+            <div class="bo-filter-group">
+                <p class="bo-filter-group-title"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> <?= esc(lang('Backoffice.trf_filter_source_group')) ?></p>
+                <div class="bo-filter-fields bo-filter-fields--2">
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.trf_filter_src_level')) ?></label>
+                        <select class="form-select" name="niveau_juridiction_source_id" data-filter="src-niveau">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($levels as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['niveau_juridiction_source_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.trf_filter_src_province')) ?></label>
+                        <select class="form-select" name="province_source_id" data-filter="src-province">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($provinces as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['province_source_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.trf_filter_src_commune')) ?></label>
+                        <select class="form-select" name="commune_source_id" data-filter="src-commune">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($sourceCommunes as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['commune_source_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.trf_filter_src_court')) ?></label>
+                        <select class="form-select" name="juridiction_source_id" data-filter="src-juridiction">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($sourceCourts as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['juridiction_source_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"><?= esc(lang('Backoffice.trf_filter_transfer_date')) ?></label>
-                <input class="form-control" type="date" name="date_transfert" value="<?= esc((string) ($filters['date_transfert'] ?? ''), 'attr') ?>">
+            <div class="bo-filter-group">
+                <p class="bo-filter-group-title"><i class="bi bi-box-arrow-in-down-left" aria-hidden="true"></i> <?= esc(lang('Backoffice.trf_filter_dest_group')) ?></p>
+                <div class="bo-filter-fields bo-filter-fields--2">
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.trf_filter_dst_level')) ?></label>
+                        <select class="form-select" name="niveau_juridiction_dest_id" data-filter="dst-niveau">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($levels as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['niveau_juridiction_dest_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.trf_filter_dst_province')) ?></label>
+                        <select class="form-select" name="province_dest_id" data-filter="dst-province">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($provinces as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['province_dest_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.trf_filter_dst_commune')) ?></label>
+                        <select class="form-select" name="commune_dest_id" data-filter="dst-commune">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($destCommunes as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['commune_dest_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.trf_filter_dst_court')) ?></label>
+                        <select class="form-select" name="juridiction_dest_id" data-filter="dst-juridiction">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($destCourts as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['juridiction_dest_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
             </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"><?= esc(lang('Backoffice.trf_filter_reception_date')) ?></label>
-                <input class="form-control" type="date" name="date_reception" value="<?= esc((string) ($filters['date_reception'] ?? ''), 'attr') ?>">
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"><?= esc(lang('Backoffice.trf_filter_status')) ?></label>
-                <select class="form-select" name="statut_transfert_dossier_id">
-                    <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
-                    <?php foreach ($statuses as $opt): ?>
-                        <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['statut_transfert_dossier_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
-                    <?php endforeach; ?>
-                </select>
+
+            <div class="bo-filter-group">
+                <p class="bo-filter-group-title"><i class="bi bi-sliders" aria-hidden="true"></i> <?= esc(lang('Backoffice.filter_group_details')) ?></p>
+                <div class="bo-filter-fields">
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.trf_filter_transfer_date')) ?></label>
+                        <input class="form-control" type="date" name="date_transfert" value="<?= esc((string) ($filters['date_transfert'] ?? ''), 'attr') ?>">
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.trf_filter_reception_date')) ?></label>
+                        <input class="form-control" type="date" name="date_reception" value="<?= esc((string) ($filters['date_reception'] ?? ''), 'attr') ?>">
+                    </div>
+                    <div class="bo-filter-field">
+                        <label class="form-label"><?= esc(lang('Backoffice.trf_filter_status')) ?></label>
+                        <select class="form-select" name="statut_transfert_dossier_id">
+                            <option value=""><?= esc(lang('Backoffice.filter_all')) ?></option>
+                            <?php foreach ($statuses as $opt): ?>
+                                <option value="<?= esc($opt['id']) ?>" <?= (string) ($filters['statut_transfert_dossier_id'] ?? '') === (string) $opt['id'] ? 'selected' : '' ?>><?= esc($opt['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
             </div>
         </div>
     </form>

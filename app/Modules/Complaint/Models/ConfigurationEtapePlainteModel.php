@@ -83,6 +83,27 @@ class ConfigurationEtapePlainteModel extends Model
     }
 
     /**
+     * Resolve the next stage for a current stage + action transition.
+     */
+    public function findNextStageId(int $actuelId, int $actionId): ?int
+    {
+        $row = $this->builder()
+            ->select('etape_plainte_suivant_id')
+            ->where('etape_plainte_actuel_id', $actuelId)
+            ->where('etape_plainte_action_id', $actionId)
+            ->where('(is_active IS NULL OR is_active = TRUE)', null, false)
+            ->orderBy('configuration_etape_plainte_id', 'ASC')
+            ->get(1)
+            ->getRowArray();
+
+        if (! $row || empty($row['etape_plainte_suivant_id'])) {
+            return null;
+        }
+
+        return (int) $row['etape_plainte_suivant_id'];
+    }
+
+    /**
      * @deprecated Use transitionExists()
      */
     public function pairExists(int $actuelId, int $suivantId, ?int $ignoreId = null): bool
